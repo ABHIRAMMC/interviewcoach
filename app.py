@@ -23,7 +23,9 @@ def secret(name, default=None):
         return os.environ.get(name, default)
 
 
-LLM_MODEL = secret("GROQ_LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_MODEL = secret("GROQ_LLM_MODEL", "openai/gpt-oss-20b")
+# Groq changes its model list often; if the main model is gone we try these in order.
+FALLBACK_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "llama-3.1-8b-instant"]
 STT_MODEL = secret("GROQ_STT_MODEL", "whisper-large-v3-turbo")
 
 
@@ -49,17 +51,48 @@ def _check(r):
     return r.json()
 
 
-def ask_llm(prompt, json_mode=False, max_tokens=900):
+def _chat(model, prompt, json_mode, max_tokens):
     body = {
-        "model": LLM_MODEL,
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": max_tokens,
     }
+    if "gpt-oss" in model:
+        # reasoning models spend tokens on thinking, so keep it short and leave headroom
+        body["reasoning_effort"] = "low"
+        body["max_completion_tokens"] = max_tokens + 600
+    else:
+        body["max_completion_tokens"] = max_tokens
     if json_mode:
         body["response_format"] = {"type": "json_object"}
-    r = requests.post(f"{GROQ_BASE}/chat/completions", headers=_headers(), json=body, timeout=60)
-    return _check(r)["choices"][0]["message"]["content"]
+    return requests.post(f"{GROQ_BASE}/chat/completions", headers=_headers(), json=body, timeout=90)
+
+
+def ask_llm(prompt, json_mode=False, max_tokens=900):
+    first = st.session_state.get("llm_model") or LLM_MODEL
+    for model in dict.fromkeys([first, LLM_MODEL] + FALLBACK_MODELS):
+        r = _chat(model, prompt, json_mode, max_tokens)
+        if r.status_code == 400 and json_mode:
+            r = _chat(model, prompt, False, max_tokens)  # model may not support JSON mode
+        if r.status_code == 404:
+            continue  # model not available on this account, try the next one
+        data = _check(r)
+        content = (data["choices"][0]["message"].get("content") or "").strip()
+        if not content:
+            raise AIError("The AI returned an empty answer. Please try again.")
+        st.session_state["llm_model"] = model
+        return content
+    raise AIError("None of the AI models are available on this Groq account. The admin should set GROQ_LLM_MODEL.")
+
+
+def parse_json(raw):
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        m = re.search(r"\{.*\}", raw, re.S)
+        if m:
+            return json.loads(m.group(0))
+        raise
 
 
 def transcribe(audio_bytes):
@@ -129,7 +162,7 @@ Return ONLY a JSON object with exactly these keys:
         json_mode=True,
         max_tokens=1200,
     )
-    data = json.loads(raw)
+    data = parse_json(raw)
     try:
         score = int(float(data.get("score", 0)))
     except (TypeError, ValueError):
