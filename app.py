@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import html
 import json
 import os
 import re
@@ -12,7 +13,32 @@ import streamlit as st
 GROQ_BASE = "https://api.groq.com/openai/v1"
 FILLERS = {"um", "uh", "umm", "erm", "like", "basically", "actually", "literally"}
 
-st.set_page_config(page_title="Interview Coach", page_icon="🎤")
+st.set_page_config(page_title="ARticulate", page_icon="🥽")
+
+GAME_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+h1 { font-family: 'Press Start 2P', monospace !important; font-size: 1.5rem !important;
+     color: #00E5FF; text-shadow: 0 0 12px rgba(0,229,255,.55); letter-spacing: 1px; }
+.quest { border: 2px solid #00E5FF; border-radius: 12px; padding: 1rem 1.2rem; margin: .5rem 0 1rem;
+         background: linear-gradient(135deg, #131A2B, #0F1426); box-shadow: 0 0 18px rgba(0,229,255,.25);
+         font-size: 1.2rem; }
+.quest .tag { font-family: 'Press Start 2P', monospace; font-size: .65rem; color: #FF2E97;
+              margin-bottom: .6rem; letter-spacing: 1px; }
+.lvl { font-family: 'Press Start 2P', monospace; font-size: .8rem; color: #FFD54F; margin: .4rem 0; }
+.grade { font-family: 'Press Start 2P', monospace; font-size: 2.6rem; text-align: center; line-height: 1.3; }
+.grade-S { color: #FFD54F; text-shadow: 0 0 14px #FFD54F; }
+.grade-A { color: #00E676; } .grade-B { color: #00E5FF; }
+.grade-C { color: #FFA726; } .grade-D { color: #FF5252; }
+.gcap { text-align: center; font-size: .75rem; opacity: .7; }
+div.stButton > button { border: 2px solid #00E5FF; border-radius: 10px; font-weight: 600; }
+div.stButton > button:hover { border-color: #FF2E97; box-shadow: 0 0 12px rgba(0,229,255,.6); }
+</style>
+"""
+
+APP_NAME = "ARticulate"
+TAGLINE = "Level up your interview skills. Answer out loud, earn XP."
+st.markdown(GAME_CSS, unsafe_allow_html=True)
 
 
 def secret(name, default=None):
@@ -114,10 +140,11 @@ def transcribe(audio_bytes):
 
 
 # ---------------- Interview logic ----------------
-def new_question(role, kind, level, asked):
+def new_question(role, kind, level, asked, boss=False):
     avoid = "; ".join(asked[-5:]) or "none"
+    hard = " Make it a hard, boss-level question that tests depth and real experience." if boss else ""
     q = ask_llm(
-        f"Ask ONE {kind} interview question for a {level} {role} candidate. "
+        f"Ask ONE {kind} interview question for a {level} {role} candidate.{hard} "
         f"Do not repeat these earlier questions: {avoid}. "
         f"Reply with the question only, no extra text.",
         max_tokens=100,
@@ -210,7 +237,8 @@ if "user" not in st.session_state:
     st.session_state.fails = 0
 
 if st.session_state.user is None:
-    st.title("🎤 Voice Interview Coach")
+    st.title(f"🥽 {APP_NAME}")
+    st.caption(TAGLINE)
     st.subheader("Sign in")
     if st.session_state.fails >= 5:
         st.error("Too many failed attempts. Please contact the admin.")
@@ -230,17 +258,81 @@ if st.session_state.user is None:
     st.stop()
 
 # ---------------- Main app (signed in) ----------------
-st.title("🎤 Voice Interview Coach")
+OTHER_ROLE = "Other (type my own)"
+ROLE_PRESETS = [
+    "Unity Game Developer",
+    "Game Programmer",
+    "AR/VR Developer",
+    "Technical Artist",
+    "3D Artist",
+    "Software Developer",
+    OTHER_ROLE,
+]
+TITLES = ["Rookie", "Apprentice", "Challenger", "Veteran", "Hero", "Legend"]
+
+for _k, _v in {"xp": 0, "streak": 0, "best_streak": 0, "badges": [], "question_boss": False}.items():
+    st.session_state.setdefault(_k, _v)
+
+
+def level_info(xp):
+    level = xp // 100 + 1
+    return level, TITLES[min(level - 1, len(TITLES) - 1)], xp % 100
+
+
+def grade_for(score):
+    return "S" if score >= 9 else "A" if score == 8 else "B" if score >= 6 else "C" if score >= 4 else "D"
+
+
+def earned_badges(score, stats, boss, streak, answers):
+    out = []
+    if answers == 1:
+        out.append("🩸 First Blood")
+    if streak >= 3:
+        out.append("🔥 Combo x3")
+    if score >= 9:
+        out.append("⭐ Flawless")
+    if boss and score >= 7:
+        out.append("⚔️ Boss Slayer")
+    if stats["filler_count"] <= 1 and stats["duration_sec"] >= 15:
+        out.append("🧼 Clean Speaker")
+    if 110 <= stats["wpm"] <= 170 and stats["long_pauses"] <= 1 and stats["duration_sec"] >= 15:
+        out.append("🎯 Perfect Pace")
+    return out
+
+
+def draw_panel():
+    level, title, into = level_info(st.session_state.xp)
+    with game_panel.container():
+        st.markdown(f'<div class="lvl">LV {level} · {title}</div>', unsafe_allow_html=True)
+        st.progress(into / 100)
+        st.caption(f"{st.session_state.xp} XP · {100 - into} XP to next level")
+        st.markdown(f"🔥 Streak **{st.session_state.streak}** · best **{st.session_state.best_streak}**")
+        if st.session_state.badges:
+            st.caption("Badges: " + " · ".join(st.session_state.badges))
+
+
+st.title(f"🥽 {APP_NAME}")
+st.caption(TAGLINE)
 
 with st.sidebar:
     st.write(f"Signed in as **{st.session_state.user}**")
     if st.button("Sign out"):
         st.session_state.clear()
         st.rerun()
+    game_panel = st.empty()
     source = st.radio("Question source", ["AI-generated", "My own questions"])
-    role = st.text_input("Role", "Unity Game Developer")
+    boss = False
+    if source == "AI-generated":
+        boss = st.toggle("⚔️ Boss round (harder questions)")
+    role_choice = st.selectbox("Role", ROLE_PRESETS)
+    if role_choice == OTHER_ROLE:
+        role = st.text_input("Type your role", placeholder="e.g. Web Developer").strip() or "Software Developer"
+    else:
+        role = role_choice
     kind = st.selectbox("Interview type", ["HR", "Behavioral", "Technical", "Mixed"])
     level = st.selectbox("Level", ["fresher", "junior", "mid-level", "senior"])
+
+draw_panel()
 
 if "asked" not in st.session_state:
     st.session_state.asked = []
@@ -253,24 +345,27 @@ if "asked" not in st.session_state:
 
 def make_question():
     try:
-        q = new_question(role, kind, level, st.session_state.asked)
+        q = new_question(role, kind, level, st.session_state.asked, boss)
     except (AIError, requests.RequestException) as e:
         st.error(str(e))
         st.stop()
     st.session_state.question = q
+    st.session_state.question_boss = boss
     st.session_state.asked.append(q)
 
 
 key_points = ""
+is_boss = False
 
 if source == "AI-generated":
-    if st.button("New question") or st.session_state.question is None:
-        with st.spinner("Thinking of a question..."):
+    if st.button("🎲 New quest") or st.session_state.question is None:
+        with st.spinner("Rolling a new quest..."):
             make_question()
     question = st.session_state.question
+    is_boss = st.session_state.question_boss
     audio_key = f"audio_ai_{len(st.session_state.asked)}"
 else:
-    with st.expander("Add or edit my questions", expanded=not st.session_state.my_questions):
+    with st.expander("Add or edit my quests", expanded=not st.session_state.my_questions):
         st.text_area("One question per line", key="q_text", height=160)
         if st.button("Save questions"):
             st.session_state.my_questions = [
@@ -290,11 +385,15 @@ else:
     if c_next.button("Next ▶") and idx < len(qs) - 1:
         st.session_state.my_idx = idx + 1
         st.rerun()
-    c_info.caption(f"Question {idx + 1} of {len(qs)}")
+    c_info.caption(f"Quest {idx + 1} of {len(qs)}")
     question = qs[idx]
     audio_key = f"audio_my_{idx}"
 
-st.subheader(question)
+tag = "⚔️ BOSS ROUND" if is_boss else "QUEST"
+st.markdown(
+    f'<div class="quest"><div class="tag">{tag}</div>{html.escape(question)}</div>',
+    unsafe_allow_html=True,
+)
 
 if source == "My own questions":
     key_points = st.text_area(
@@ -304,9 +403,9 @@ if source == "My own questions":
         height=90,
     )
 
-audio = st.audio_input("Record your answer", key=audio_key)
+audio = st.audio_input("🎙️ Record your answer", key=audio_key)
 
-if audio and st.button("Analyze my answer"):
+if audio and st.button("⚔️ Submit answer"):
     try:
         with st.spinner("Transcribing..."):
             text, words = transcribe(audio.getvalue())
@@ -314,7 +413,7 @@ if audio and st.button("Analyze my answer"):
             st.warning("Couldn't hear anything. Try recording again.")
             st.stop()
         stats = delivery_stats(words)
-        with st.spinner("Analyzing..."):
+        with st.spinner("The judges are scoring..."):
             fb = analyze(question, text, stats, role, kind, key_points)
     except AIError as e:
         st.error(str(e))
@@ -323,23 +422,41 @@ if audio and st.button("Analyze my answer"):
         st.error(f"Something went wrong, please try again. ({type(e).__name__})")
         st.stop()
 
-    st.session_state.history.append(fb["score"])
+    # ---- game bookkeeping
+    score = fb["score"]
+    old_level = level_info(st.session_state.xp)[0]
+    st.session_state.streak = st.session_state.streak + 1 if score >= 7 else 0
+    st.session_state.best_streak = max(st.session_state.best_streak, st.session_state.streak)
+    gain = score * 10 + (20 if is_boss else 0) + (10 if st.session_state.streak >= 3 else 0)
+    st.session_state.xp += gain
+    st.session_state.history.append(score)
+    new_badges = [
+        b for b in earned_badges(score, stats, is_boss, st.session_state.streak, len(st.session_state.history))
+        if b not in st.session_state.badges
+    ]
+    st.session_state.badges.extend(new_badges)
+    new_level = level_info(st.session_state.xp)[0]
+
+    # ---- results
+    g = grade_for(score)
+    st.markdown("### 🏁 Quest complete!")
+    r1, r2, r3 = st.columns(3)
+    r1.markdown(f'<div class="grade grade-{g}">{g}</div><div class="gcap">RANK</div>', unsafe_allow_html=True)
+    r2.metric("Score", f"{score}/10")
+    r3.metric("XP earned", f"+{gain}")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Pace (words/min)", stats["wpm"])
+    c2.metric("Filler words", stats["filler_count"])
+    c3.metric("Long pauses", stats["long_pauses"])
 
     st.markdown("### Your transcript")
     st.write(text)
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Score", f"{fb['score']}/10")
-    c2.metric("Words/min", stats["wpm"])
-    c3.metric("Fillers", stats["filler_count"])
-    c4.metric("Long pauses", stats["long_pauses"])
-
-    st.markdown("### ✅ Strengths")
-    for s in fb["strengths"]:
-        st.write(f"- {s}")
-    st.markdown("### ⚠️ What was missing")
-    for m in fb["missing"]:
-        st.write(f"- {m}")
+    st.markdown("### 💪 Strengths")
+    for s_ in fb["strengths"]:
+        st.write(f"- {s_}")
+    st.markdown("### 🗺️ Missed loot (what was missing)")
+    for m_ in fb["missing"]:
+        st.write(f"- {m_}")
     st.markdown("### Structure")
     st.write(fb["structure_feedback"])
     st.markdown("### Delivery")
@@ -347,6 +464,13 @@ if audio and st.button("Analyze my answer"):
     st.markdown("### 💡 Stronger version")
     st.info(fb["improved_answer"])
 
+    for b_ in new_badges:
+        st.toast(f"Badge unlocked: {b_}", icon="🏅")
+    if new_level > old_level:
+        st.balloons()
+        st.toast(f"LEVEL UP! You are now level {new_level}", icon="🆙")
+    draw_panel()
+
 if st.session_state.history:
-    st.sidebar.markdown("### Progress")
+    st.sidebar.markdown("### Score history")
     st.sidebar.line_chart(st.session_state.history)
