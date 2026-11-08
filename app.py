@@ -145,12 +145,14 @@ def as_list(x):
     return [str(x)] if x else []
 
 
-def analyze(question, answer, stats, role, kind):
+def analyze(question, answer, stats, role, kind, key_points=""):
     raw = ask_llm(
         f"""You are a strict but kind interview coach for a {role} {kind} interview.
 Question: {question}
 Candidate's spoken answer (transcript): {answer}
 Delivery stats: {stats}
+{("The answer should cover these key points: " + key_points + ". Say which ones were covered and list the ones that were missed under 'missing'.") if key_points.strip() else ""}
+If the answer contains factual mistakes, point them out under "missing".
 
 Return ONLY a JSON object with exactly these keys:
 "score": integer 1-10,
@@ -235,6 +237,7 @@ with st.sidebar:
     if st.button("Sign out"):
         st.session_state.clear()
         st.rerun()
+    source = st.radio("Question source", ["AI-generated", "My own questions"])
     role = st.text_input("Role", "Unity Game Developer")
     kind = st.selectbox("Interview type", ["HR", "Behavioral", "Technical", "Mixed"])
     level = st.selectbox("Level", ["fresher", "junior", "mid-level", "senior"])
@@ -243,6 +246,9 @@ if "asked" not in st.session_state:
     st.session_state.asked = []
     st.session_state.question = None
     st.session_state.history = []
+    st.session_state.my_questions = []
+    st.session_state.my_idx = 0
+    st.session_state.q_text = ""
 
 
 def make_question():
@@ -255,13 +261,50 @@ def make_question():
     st.session_state.asked.append(q)
 
 
-if st.button("New question") or st.session_state.question is None:
-    with st.spinner("Thinking of a question..."):
-        make_question()
+key_points = ""
 
-st.subheader(st.session_state.question)
+if source == "AI-generated":
+    if st.button("New question") or st.session_state.question is None:
+        with st.spinner("Thinking of a question..."):
+            make_question()
+    question = st.session_state.question
+    audio_key = f"audio_ai_{len(st.session_state.asked)}"
+else:
+    with st.expander("Add or edit my questions", expanded=not st.session_state.my_questions):
+        st.text_area("One question per line", key="q_text", height=160)
+        if st.button("Save questions"):
+            st.session_state.my_questions = [
+                q.strip() for q in st.session_state.q_text.splitlines() if q.strip()
+            ]
+            st.session_state.my_idx = 0
+            st.rerun()
+    qs = st.session_state.my_questions
+    if not qs:
+        st.info("Type your questions above (one per line), then click **Save questions**.")
+        st.stop()
+    idx = min(st.session_state.my_idx, len(qs) - 1)
+    c_prev, c_next, c_info = st.columns([1, 1, 3])
+    if c_prev.button("◀ Previous") and idx > 0:
+        st.session_state.my_idx = idx - 1
+        st.rerun()
+    if c_next.button("Next ▶") and idx < len(qs) - 1:
+        st.session_state.my_idx = idx + 1
+        st.rerun()
+    c_info.caption(f"Question {idx + 1} of {len(qs)}")
+    question = qs[idx]
+    audio_key = f"audio_my_{idx}"
 
-audio = st.audio_input("Record your answer")
+st.subheader(question)
+
+if source == "My own questions":
+    key_points = st.text_area(
+        "Key points a good answer should cover (optional)",
+        key=f"kp_{idx}",
+        placeholder="e.g. mention object pooling, Update vs FixedUpdate, a real example",
+        height=90,
+    )
+
+audio = st.audio_input("Record your answer", key=audio_key)
 
 if audio and st.button("Analyze my answer"):
     try:
@@ -272,7 +315,7 @@ if audio and st.button("Analyze my answer"):
             st.stop()
         stats = delivery_stats(words)
         with st.spinner("Analyzing..."):
-            fb = analyze(st.session_state.question, text, stats, role, kind)
+            fb = analyze(question, text, stats, role, kind, key_points)
     except AIError as e:
         st.error(str(e))
         st.stop()
