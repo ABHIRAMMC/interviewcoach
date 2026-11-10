@@ -1,14 +1,16 @@
-import hashlib
-import hmac
 import html
 import json
-import os
+import random
 import re
 import time
-from pathlib import Path
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
+
+from admin import render_admin
+from db import (DBError, add_attempt, count_today, db_configured, get_user, list_questions_cached,
+                load_progress, recent_scores, save_progress, secret, touch_login, verify_password)
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
 FILLERS = {"um", "uh", "umm", "erm", "like", "basically", "actually", "literally"}
@@ -40,15 +42,7 @@ APP_NAME = "ARticulate"
 TAGLINE = "Level up your interview skills. Answer out loud, earn XP."
 st.markdown(GAME_CSS, unsafe_allow_html=True)
 
-
-def secret(name, default=None):
-    """Read from Streamlit secrets, then environment variables."""
-    try:
-        return st.secrets[name]
-    except Exception:
-        return os.environ.get(name, default)
-
-
+DAILY_LIMIT = int(secret("DAILY_LIMIT", 10))  # answers per student per day (protects the free AI quota)
 LLM_MODEL = secret("GROQ_LLM_MODEL", "openai/gpt-oss-20b")
 # Groq changes its model list often; if the main model is gone we try these in order.
 FALLBACK_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "llama-3.1-8b-instant"]
@@ -77,6 +71,21 @@ def _check(r):
     return r.json()
 
 
+def _post(url, **kw):
+    """POST to Groq, waiting a few seconds and retrying when the free quota says 'slow down'."""
+    for attempt in range(3):
+        r = requests.post(url, **kw)
+        if r.status_code == 429 and attempt < 2:
+            try:
+                wait = float(r.headers.get("retry-after", 4))
+            except (ValueError, AttributeError):
+                wait = 4
+            time.sleep(min(wait, 8))
+            continue
+        return r
+    return r
+
+
 def _chat(model, prompt, json_mode, max_tokens):
     body = {
         "model": model,
@@ -91,7 +100,7 @@ def _chat(model, prompt, json_mode, max_tokens):
         body["max_completion_tokens"] = max_tokens
     if json_mode:
         body["response_format"] = {"type": "json_object"}
-    return requests.post(f"{GROQ_BASE}/chat/completions", headers=_headers(), json=body, timeout=90)
+    return _post(f"{GROQ_BASE}/chat/completions", headers=_headers(), json=body, timeout=90)
 
 
 def ask_llm(prompt, json_mode=False, max_tokens=900):
@@ -122,7 +131,7 @@ def parse_json(raw):
 
 
 def transcribe(audio_bytes):
-    r = requests.post(
+    r = _post(
         f"{GROQ_BASE}/audio/transcriptions",
         headers=_headers(),
         files={"file": ("answer.wav", audio_bytes, "audio/wav")},
@@ -206,30 +215,60 @@ Return ONLY a JSON object with exactly these keys:
     }
 
 
+# ---------------- Voice (the browser reads text aloud, free) ----------------
+def speak_button(text, label="🔊 Read aloud"):
+    # The text goes into the page only as a JSON string with every "<" escaped, so it can never close the script.
+    safe = json.dumps(str(text)).replace("<", "\\u003c")
+    page = f"""
+<button id="b" style="background:#131A2B;color:#E8ECF8;border:2px solid #00E5FF;border-radius:10px;
+        padding:8px 14px;font-size:15px;cursor:pointer">{html.escape(label)}</button>
+<script>
+const text = {safe};
+const btn = document.getElementById('b');
+btn.onclick = () => {{
+  const s = window.speechSynthesis;
+  if (!s) {{ btn.textContent = 'Voice is not supported in this browser'; return; }}
+  if (s.speaking) {{ s.cancel(); return; }}
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-IN'; u.rate = 0.95;
+  const voices = s.getVoices();
+  const v = voices.find(x => x.lang === 'en-IN') || voices.find(x => x.lang.startsWith('en'));
+  if (v) u.voice = v;
+  s.speak(u);
+}};
+</script>"""
+    if hasattr(st, "iframe"):  # newer Streamlit
+        st.iframe(page, height=56)
+    else:
+        components.html(page, height=56)
+
+
 # ---------------- Login ----------------
-USERS_FILE = Path(__file__).with_name("users.json")
-HASH_ITER = 200_000
-
-
-def load_users():
-    # Deployed: users live in the USERS_JSON secret. Local: users.json file.
+def secret_admins():
+    """Admin accounts live in the USERS_JSON secret (made with add_user.py)."""
     raw = secret("USERS_JSON")
-    if raw:
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            return {}
     try:
-        return json.loads(USERS_FILE.read_text())
-    except (FileNotFoundError, json.JSONDecodeError):
+        data = json.loads(raw) if raw else {}
+        return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
         return {}
 
 
-def check_login(username, password):
-    rec = load_users().get(username.strip().lower())
-    salt = bytes.fromhex(rec["salt"]) if rec else b"\x00" * 16
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, HASH_ITER).hex()
-    return bool(rec) and hmac.compare_digest(digest, rec["hash"])
+def authenticate(username, password):
+    """Return the account dict, or None for a wrong ID or password. Raises DBError if the database is down."""
+    u = username.strip().lower()
+    rec = secret_admins().get(u)
+    if rec:
+        ok = verify_password(password, rec.get("salt", ""), rec.get("hash", ""))
+        return {"username": u, "name": u, "role": "admin"} if ok else None
+    if db_configured():
+        row = get_user(u)
+        if row is None:
+            verify_password(password, "00" * 16, "00" * 32)  # keep the timing similar for unknown IDs
+            return None
+        if row.get("active", True) and verify_password(password, row["salt"], row["hash"]):
+            return {"username": u, "name": row.get("name") or u, "role": "student"}
+    return None
 
 
 if "user" not in st.session_state:
@@ -240,16 +279,27 @@ if st.session_state.user is None:
     st.title(f"🥽 {APP_NAME}")
     st.caption(TAGLINE)
     st.subheader("Sign in")
+    st.caption("Use the ID and password your teacher gave you. Your scores and the text of your answers are saved "
+               "so your teachers can follow your progress. Your voice recordings are never stored.")
     if st.session_state.fails >= 5:
-        st.error("Too many failed attempts. Please contact the admin.")
+        st.error("Too many failed attempts. Please contact your teacher.")
         st.stop()
     with st.form("login"):
         u = st.text_input("User ID")
         p = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign in")
     if submitted:
-        if check_login(u, p):
-            st.session_state.user = u.strip().lower()
+        try:
+            acct = authenticate(u, p)
+        except DBError as e:
+            st.error(str(e))
+            st.stop()
+        if acct:
+            st.session_state.user = acct["username"]
+            st.session_state.name = acct["name"]
+            st.session_state.account_role = acct["role"]
+            if acct["role"] == "student":
+                touch_login(acct["username"])
             st.rerun()
         else:
             st.session_state.fails += 1
@@ -257,7 +307,7 @@ if st.session_state.user is None:
             st.error("Wrong ID or password.")
     st.stop()
 
-# ---------------- Main app (signed in) ----------------
+# ---------------- Game helpers ----------------
 OTHER_ROLE = "Other (type my own)"
 ROLE_PRESETS = [
     "Unity Game Developer",
@@ -269,9 +319,33 @@ ROLE_PRESETS = [
     OTHER_ROLE,
 ]
 TITLES = ["Rookie", "Apprentice", "Challenger", "Veteran", "Hero", "Legend"]
+ALL_BADGES = ["🩸 First Blood", "🔥 Combo x3", "⭐ Flawless", "⚔️ Boss Slayer", "🧼 Clean Speaker", "🎯 Perfect Pace"]
 
-for _k, _v in {"xp": 0, "streak": 0, "best_streak": 0, "badges": [], "question_boss": False}.items():
+is_admin = st.session_state.account_role == "admin"
+for _k, _v in {"xp": 0, "streak": 0, "best_streak": 0, "badges": [], "history": [], "question_boss": False,
+               "used_today": 0, "bank_idx": 0}.items():
     st.session_state.setdefault(_k, _v)
+
+
+def load_saved_progress():
+    ss = st.session_state
+    if ss.get("progress_loaded"):
+        return
+    ss.progress_loaded = True
+    if not db_configured():
+        return
+    try:
+        p = load_progress(ss.user)
+        if p:
+            ss.xp = int(p.get("xp") or 0)
+            ss.streak = int(p.get("streak") or 0)
+            ss.best_streak = int(p.get("best_streak") or 0)
+            ss.badges = [b for b in ALL_BADGES if b in (p.get("badges") or [])]
+        ss.history = recent_scores(ss.user, 30)
+        if not is_admin:
+            ss.used_today = count_today(ss.user)
+    except DBError as e:
+        st.warning(f"Couldn't load your saved progress. {e}")
 
 
 def level_info(xp):
@@ -309,35 +383,62 @@ def draw_panel():
         st.markdown(f"🔥 Streak **{st.session_state.streak}** · best **{st.session_state.best_streak}**")
         if st.session_state.badges:
             st.caption("Badges: " + " · ".join(st.session_state.badges))
+        if not is_admin and db_configured():
+            st.caption(f"Answers today: {st.session_state.used_today} of {DAILY_LIMIT}")
 
 
+# ---------------- Main app ----------------
 st.title(f"🥽 {APP_NAME}")
 st.caption(TAGLINE)
 
 with st.sidebar:
-    st.write(f"Signed in as **{st.session_state.user}**")
+    st.write(f"Signed in as **{st.session_state.name}**")
     if st.button("Sign out"):
         st.session_state.clear()
         st.rerun()
+    mode = "Practice"
+    if is_admin:
+        mode = st.radio("Mode", ["Practice", "Teacher panel"], key="mode")
+
+if mode == "Teacher panel":
+    render_admin(st.session_state.user)
+    st.stop()
+
+load_saved_progress()
+
+bank = []
+if db_configured():
+    try:
+        bank = list_questions_cached()
+    except DBError as e:
+        st.sidebar.warning(f"The question bank is unavailable. {e}")
+sources = (["Question bank"] if bank else []) + ["AI-generated", "My own questions"]
+
+with st.sidebar:
     game_panel = st.empty()
-    source = st.radio("Question source", ["AI-generated", "My own questions"])
+    source = st.radio("Question source", sources)
+    cat_choice = "All"
     boss = False
-    if source == "AI-generated":
-        boss = st.toggle("⚔️ Boss round (harder questions)")
-    role_choice = st.selectbox("Role", ROLE_PRESETS)
-    if role_choice == OTHER_ROLE:
-        role = st.text_input("Type your role", placeholder="e.g. Web Developer").strip() or "Software Developer"
+    if source == "Question bank":
+        cats = sorted({(q.get("category") or "General") for q in bank})
+        cat_choice = st.selectbox("Category", ["All"] + cats)
+        role, kind, level = "BCA student", "interview", "fresher"
     else:
-        role = role_choice
-    kind = st.selectbox("Interview type", ["HR", "Behavioral", "Technical", "Mixed"])
-    level = st.selectbox("Level", ["fresher", "junior", "mid-level", "senior"])
+        if source == "AI-generated":
+            boss = st.toggle("⚔️ Boss round (harder questions)")
+        role_choice = st.selectbox("Role", ROLE_PRESETS)
+        if role_choice == OTHER_ROLE:
+            role = st.text_input("Type your role", placeholder="e.g. Web Developer").strip() or "Software Developer"
+        else:
+            role = role_choice
+        kind = st.selectbox("Interview type", ["HR", "Behavioral", "Technical", "Mixed"])
+        level = st.selectbox("Level", ["fresher", "junior", "mid-level", "senior"])
 
 draw_panel()
 
 if "asked" not in st.session_state:
     st.session_state.asked = []
     st.session_state.question = None
-    st.session_state.history = []
     st.session_state.my_questions = []
     st.session_state.my_idx = 0
     st.session_state.q_text = ""
@@ -356,8 +457,34 @@ def make_question():
 
 key_points = ""
 is_boss = False
+question_id = None
+src_tag = "ai"
 
-if source == "AI-generated":
+if source == "Question bank":
+    src_tag = "bank"
+    pool = [q for q in bank if cat_choice == "All" or (q.get("category") or "General") == cat_choice]
+    if not pool:
+        st.info("There are no questions in this category yet.")
+        st.stop()
+    idx = min(st.session_state.bank_idx, len(pool) - 1)
+    c_prev, c_next, c_rand, c_info = st.columns([1, 1, 1, 2])
+    if c_prev.button("◀ Previous") and idx > 0:
+        st.session_state.bank_idx = idx - 1
+        st.rerun()
+    if c_next.button("Next ▶") and idx < len(pool) - 1:
+        st.session_state.bank_idx = idx + 1
+        st.rerun()
+    if c_rand.button("🎲 Random") and len(pool) > 1:
+        st.session_state.bank_idx = random.choice([i for i in range(len(pool)) if i != idx])
+        st.rerun()
+    c_info.caption(f"Quest {idx + 1} of {len(pool)}")
+    chosen = pool[idx]
+    question = chosen["text"]
+    key_points = chosen.get("key_points") or ""
+    question_id = chosen["id"]
+    kind = chosen.get("category") or "interview"
+    audio_key = f"audio_bank_{question_id}"
+elif source == "AI-generated":
     if st.button("🎲 New quest") or st.session_state.question is None:
         with st.spinner("Rolling a new quest..."):
             make_question()
@@ -365,6 +492,7 @@ if source == "AI-generated":
     is_boss = st.session_state.question_boss
     audio_key = f"audio_ai_{len(st.session_state.asked)}"
 else:
+    src_tag = "mine"
     with st.expander("Add or edit my quests", expanded=not st.session_state.my_questions):
         st.text_area("One question per line", key="q_text", height=160)
         if st.button("Save questions"):
@@ -394,6 +522,7 @@ st.markdown(
     f'<div class="quest"><div class="tag">{tag}</div>{html.escape(question)}</div>',
     unsafe_allow_html=True,
 )
+speak_button(question, "🔊 Read the question aloud")
 
 if source == "My own questions":
     key_points = st.text_area(
@@ -406,6 +535,9 @@ if source == "My own questions":
 audio = st.audio_input("🎙️ Record your answer", key=audio_key)
 
 if audio and st.button("⚔️ Submit answer"):
+    if not is_admin and db_configured() and st.session_state.used_today >= DAILY_LIMIT:
+        st.warning(f"You have used all {DAILY_LIMIT} answers for today. Come back tomorrow!")
+        st.stop()
     try:
         with st.spinner("Transcribing..."):
             text, words = transcribe(audio.getvalue())
@@ -430,15 +562,28 @@ if audio and st.button("⚔️ Submit answer"):
     gain = score * 10 + (20 if is_boss else 0) + (10 if st.session_state.streak >= 3 else 0)
     st.session_state.xp += gain
     st.session_state.history.append(score)
+    st.session_state.used_today += 1
     new_badges = [
         b for b in earned_badges(score, stats, is_boss, st.session_state.streak, len(st.session_state.history))
         if b not in st.session_state.badges
     ]
     st.session_state.badges.extend(new_badges)
     new_level = level_info(st.session_state.xp)[0]
+    g = grade_for(score)
+
+    # ---- save to the database (the result is still shown if this fails)
+    if db_configured():
+        try:
+            save_progress(st.session_state.user, st.session_state.xp, st.session_state.streak,
+                          st.session_state.best_streak, st.session_state.badges)
+            add_attempt(username=st.session_state.user, question=question, question_id=question_id,
+                        source=src_tag, score=score, xp=gain, grade=g, wpm=stats["wpm"],
+                        fillers=stats["filler_count"], pauses=stats["long_pauses"],
+                        transcript=text, feedback=fb)
+        except DBError as e:
+            st.warning(f"Your result could not be saved. {e}")
 
     # ---- results
-    g = grade_for(score)
     st.markdown("### 🏁 Quest complete!")
     r1, r2, r3 = st.columns(3)
     r1.markdown(f'<div class="grade grade-{g}">{g}</div><div class="gcap">RANK</div>', unsafe_allow_html=True)
@@ -463,6 +608,10 @@ if audio and st.button("⚔️ Submit answer"):
     st.write(fb["delivery_feedback"])
     st.markdown("### 💡 Stronger version")
     st.info(fb["improved_answer"])
+    spoken = f"Your score is {score} out of 10. " + " ".join(
+        ["What was missing: " + ". ".join(fb["missing"]) + "."] if fb["missing"] else []
+    ) + " " + fb["delivery_feedback"]
+    speak_button(spoken, "🔊 Read my feedback aloud")
 
     for b_ in new_badges:
         st.toast(f"Badge unlocked: {b_}", icon="🏅")
