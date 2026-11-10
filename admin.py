@@ -6,7 +6,7 @@ from datetime import datetime
 import streamlit as st
 
 from bulk import clean_username, parse_questions, parse_students
-from db import (DBConflict, DBError, IST, add_questions, all_progress, attempts_overview, clear_questions,
+from db import (DBConflict, DBError, IST, db, add_questions, all_progress, attempts_overview, clear_questions,
                 create_user, create_users_bulk, delete_questions, delete_student, existing_usernames,
                 hash_password, list_questions, list_students, new_password, set_active, set_password,
                 student_attempts)
@@ -232,6 +232,7 @@ def results_tab():
 def render_admin(who):
     st.header("🛠️ Teacher panel")
     try:
+        db("GET", "users", {"select": "username", "limit": "1"})  # connection test
         t1, t2, t3 = st.tabs(["👩‍🎓 Students", "📚 Question bank", "📊 Results"])
         with t1:
             students_tab()
@@ -240,4 +241,4 @@ def render_admin(who):
         with t3:
             results_tab()
     except DBError as e:
-        st.error(str(e))
+        st.error(f"Database problem: {e}")

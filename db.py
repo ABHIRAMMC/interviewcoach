@@ -49,12 +49,27 @@ class DBConflict(DBError):
     pass
 
 
+def _clean(value):
+    return str(value or "").strip().strip("\"'").strip()
+
+
+def base_url():
+    """Tidy up SUPABASE_URL so small copy-paste slips still work."""
+    url = _clean(secret("SUPABASE_URL")).rstrip("/")
+    for suffix in ("/rest/v1", "/rest"):
+        if url.endswith(suffix):
+            url = url[: -len(suffix)]
+    if url and not url.startswith(("http://", "https://")):
+        url = "https://" + (url if "." in url else f"{url}.supabase.co")
+    return url
+
+
 def db_configured():
-    return bool(secret("SUPABASE_URL") and secret("SUPABASE_SECRET_KEY"))
+    return bool(base_url() and _clean(secret("SUPABASE_SECRET_KEY")))
 
 
 def db(method, table, params=None, body=None, prefer=None):
-    url, key = secret("SUPABASE_URL"), secret("SUPABASE_SECRET_KEY")
+    url, key = base_url(), _clean(secret("SUPABASE_SECRET_KEY"))
     if not (url and key):
         raise DBError("The database is not connected yet.")
     headers = {"apikey": key, "Content-Type": "application/json"}
@@ -63,14 +78,21 @@ def db(method, table, params=None, body=None, prefer=None):
     if prefer:
         headers["Prefer"] = prefer
     try:
-        r = requests.request(method, f"{url.rstrip('/')}/rest/v1/{table}", headers=headers,
+        r = requests.request(method, f"{url}/rest/v1/{table}", headers=headers,
                              params=params, json=body, timeout=20)
+    except (requests.exceptions.MissingSchema, requests.exceptions.InvalidSchema, requests.exceptions.InvalidURL):
+        raise DBError("SUPABASE_URL looks wrong. It should look like https://abcdefgh.supabase.co")
+    except requests.exceptions.ConnectionError:
+        raise DBError("Can't reach the database. Check that SUPABASE_URL is spelled exactly as in Supabase "
+                      "(https://<project>.supabase.co) and that the project is not paused.")
     except requests.RequestException:
-        raise DBError("Can't reach the database. If the Supabase project was paused, restore it in the Supabase dashboard.")
+        raise DBError("The database did not answer in time. Please try again.")
     if r.status_code in (401, 403):
         raise DBError("The database rejected the key. Check SUPABASE_SECRET_KEY in Secrets.")
     if r.status_code == 409:
         raise DBConflict("That record already exists.")
+    if r.status_code == 404 and ("PGRST205" in r.text or "schema cache" in r.text or "PGRST125" in r.text):
+        raise DBError("The database tables don't exist yet. Run supabase_setup.sql in the Supabase SQL Editor.")
     if not r.ok:
         raise DBError(f"Database error {r.status_code}: {r.text[:200]}")
     return r.json() if r.text else []
