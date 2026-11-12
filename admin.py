@@ -53,8 +53,8 @@ def students_tab():
                 st.error("That ID already exists.")
 
     st.subheader("Add many students")
-    st.caption("Upload a CSV or Excel file with the columns: roll number (or ID), name, and optionally password. "
-               "Empty passwords are generated for you.")
+    st.caption("Upload a CSV or Excel file with three columns, in this order: **1) ID or roll number, 2) name, "
+               "3) password**. A heading row is fine. If a password cell is empty, a password is generated for that student.")
     up = st.file_uploader("Student list", type=["csv", "xlsx"], key="students_file")
     if up is not None:
         students, problems = parse_students(up.getvalue(), up.name)
@@ -64,7 +64,9 @@ def students_tab():
         if len(problems) > 10:
             st.caption(f"...and {len(problems) - 10} more problems.")
         if students:
-            st.dataframe([{"ID": s["username"], "Name": s["name"]} for s in students[:200]], hide_index=True)
+            st.dataframe([{"ID": s["username"], "Name": s["name"],
+                            "Password": "from the file" if s["password"] else "will be generated"}
+                           for s in students[:200]], hide_index=True)
             if st.button("Create these accounts", key="create_bulk"):
                 existing = existing_usernames()
                 rows, created, skipped = [], [], []

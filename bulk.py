@@ -98,16 +98,26 @@ def parse_questions(raw, filename, default_category="General"):
 
 
 def parse_students(raw, filename):
-    """Return (students, problems). Each student is {"username", "name", "password"} (password may be '')."""
+    """Return (students, problems). Each student is {"username", "name", "password"} (password may be '').
+
+    Columns are read in this order: 1 = ID (roll number), 2 = name, 3 = password. If the first row is a heading
+    row, headings we recognise (for example "Password" or "Pass") move a column; any column without a recognised
+    heading keeps its place, so the third column is always read as the password."""
     rows = read_rows(raw, filename)
     ii, ni, pi = 0, 1, 2
-    start = 1
+    start = 0
     if rows:
-        h = _find(rows[0], ID_HEADERS)
-        if h is not None:
-            ii, ni, pi = h, _find(rows[0], NAME_HEADERS), _find(rows[0], PW_HEADERS)
-        else:
-            start = 0
+        first = rows[0]
+        h_id, h_name, h_pw = _find(first, ID_HEADERS), _find(first, NAME_HEADERS), _find(first, PW_HEADERS)
+        if h_pw is None:  # headings such as "Default Pass Code"; a real password like "anupass1" has digits
+            h_pw = next((i for i, c in enumerate(first) if "pass" in c.lower() and len(c) <= 25
+                         and not any(ch.isdigit() for ch in c)), None)
+        no_digits = not any(ch.isdigit() for c in first for ch in c)  # roll numbers and passwords usually have digits
+        if h_id is not None or h_name is not None or h_pw is not None or (no_digits and len(first) >= 2):
+            start = 1  # the first row is a heading row
+            ii = h_id if h_id is not None else 0
+            ni = h_name if h_name is not None else next((i for i in (1, 0, 2) if i not in (ii, h_pw)), 1)
+            pi = h_pw if h_pw is not None else next((i for i in (2, 1, 0) if i not in (ii, ni)), 2)
     out, problems, seen = [], [], set()
     for n, r in enumerate(rows[start:], start=start + 1):
         raw_id = _cell(r, ii)
