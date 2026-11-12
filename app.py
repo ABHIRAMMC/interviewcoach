@@ -8,6 +8,7 @@ import requests
 import streamlit as st
 import streamlit.components.v1 as components
 
+import art
 from admin import render_admin
 from db import (DBError, add_attempt, count_today, db_configured, get_user, list_questions_cached,
                 load_progress, recent_scores, save_progress, secret, touch_login, verify_password)
@@ -17,30 +18,10 @@ FILLERS = {"um", "uh", "umm", "erm", "like", "basically", "actually", "literally
 
 st.set_page_config(page_title="ARticulate", page_icon="🥽")
 
-GAME_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-h1 { font-family: 'Press Start 2P', monospace !important; font-size: 1.5rem !important;
-     color: #00E5FF; text-shadow: 0 0 12px rgba(0,229,255,.55); letter-spacing: 1px; }
-.quest { border: 2px solid #00E5FF; border-radius: 12px; padding: 1rem 1.2rem; margin: .5rem 0 1rem;
-         background: linear-gradient(135deg, #131A2B, #0F1426); box-shadow: 0 0 18px rgba(0,229,255,.25);
-         font-size: 1.2rem; }
-.quest .tag { font-family: 'Press Start 2P', monospace; font-size: .65rem; color: #FF2E97;
-              margin-bottom: .6rem; letter-spacing: 1px; }
-.lvl { font-family: 'Press Start 2P', monospace; font-size: .8rem; color: #FFD54F; margin: .4rem 0; }
-.grade { font-family: 'Press Start 2P', monospace; font-size: 2.6rem; text-align: center; line-height: 1.3; }
-.grade-S { color: #FFD54F; text-shadow: 0 0 14px #FFD54F; }
-.grade-A { color: #00E676; } .grade-B { color: #00E5FF; }
-.grade-C { color: #FFA726; } .grade-D { color: #FF5252; }
-.gcap { text-align: center; font-size: .75rem; opacity: .7; }
-div.stButton > button { border: 2px solid #00E5FF; border-radius: 10px; font-weight: 600; }
-div.stButton > button:hover { border-color: #FF2E97; box-shadow: 0 0 12px rgba(0,229,255,.6); }
-</style>
-"""
 
 APP_NAME = "ARticulate"
-TAGLINE = "Level up your interview skills. Answer out loud, earn XP."
-st.markdown(GAME_CSS, unsafe_allow_html=True)
+TAGLINE = "Step into your interview. Answer out loud, earn XP, level up."
+st.markdown(art.build_css(), unsafe_allow_html=True)
 
 DAILY_LIMIT = int(secret("DAILY_LIMIT", 10))  # answers per student per day (protects the free AI quota)
 LLM_MODEL = secret("GROQ_LLM_MODEL", "openai/gpt-oss-20b")
@@ -276,8 +257,7 @@ if "user" not in st.session_state:
     st.session_state.fails = 0
 
 if st.session_state.user is None:
-    st.title(f"🥽 {APP_NAME}")
-    st.caption(TAGLINE)
+    st.markdown(art.hero_html(APP_NAME, TAGLINE), unsafe_allow_html=True)
     st.subheader("Sign in")
     st.caption("Use the ID and password your teacher gave you. Your scores and the text of your answers are saved "
                "so your teachers can follow your progress. Your voice recordings are never stored.")
@@ -377,7 +357,7 @@ def earned_badges(score, stats, boss, streak, answers):
 def draw_panel():
     level, title, into = level_info(st.session_state.xp)
     with game_panel.container():
-        st.markdown(f'<div class="lvl">LV {level} · {title}</div>', unsafe_allow_html=True)
+        st.markdown(art.level_html(level, title), unsafe_allow_html=True)
         st.progress(into / 100)
         st.caption(f"{st.session_state.xp} XP · {100 - into} XP to next level")
         st.markdown(f"🔥 Streak **{st.session_state.streak}** · best **{st.session_state.best_streak}**")
@@ -388,8 +368,7 @@ def draw_panel():
 
 
 # ---------------- Main app ----------------
-st.title(f"🥽 {APP_NAME}")
-st.caption(TAGLINE)
+st.markdown(art.hero_html(APP_NAME, TAGLINE), unsafe_allow_html=True)
 
 with st.sidebar:
     st.write(f"Signed in as **{st.session_state.name}**")
@@ -584,7 +563,7 @@ if audio and st.button("⚔️ Submit answer"):
             st.warning(f"Your result could not be saved. {e}")
 
     # ---- results
-    st.markdown("### 🏁 Quest complete!")
+    st.markdown(art.trophy_html("Quest complete!"), unsafe_allow_html=True)
     r1, r2, r3 = st.columns(3)
     r1.markdown(f'<div class="grade grade-{g}">{g}</div><div class="gcap">RANK</div>', unsafe_allow_html=True)
     r2.metric("Score", f"{score}/10")
