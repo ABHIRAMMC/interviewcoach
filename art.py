@@ -175,8 +175,41 @@ h3 { background: linear-gradient(90deg, #ff9ff3, #7cf9ff); -webkit-background-cl
 div.stButton > button, div.stDownloadButton > button, button[kind="secondaryFormSubmit"], button[kind="primaryFormSubmit"] {
   background: linear-gradient(135deg, #7c4dff, #16b7ff); color: #fff; border: 0; border-radius: 12px; font-weight: 700; }
 div.stButton > button:hover, div.stDownloadButton > button:hover { background: linear-gradient(135deg, #ff3cac, #7c4dff); color: #fff; box-shadow: 0 0 16px rgba(255,60,172,.65); }
+
+/* ---- floating particles: they live behind the page content but above the colourful background ---- */
+[data-testid="stAppViewContainer"], [data-testid="stMain"], .stMain, header[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stMainBlockContainer"], .block-container { position: relative; z-index: 1; }
+.particles { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.p { position: absolute; top: 0; left: 0; opacity: 0; animation-name: floatUp; animation-timing-function: linear;
+     animation-iteration-count: infinite; will-change: transform, opacity; }
+.p-dot { border-radius: 50%; background: var(--c); box-shadow: 0 0 12px var(--c); }
+.p-ring { border-radius: 50%; border: 2px solid var(--c); box-shadow: 0 0 10px var(--c); }
+.p-sq { border: 2px solid var(--c); border-radius: 3px; background: rgba(255,255,255,.07); box-shadow: 0 0 10px var(--c); }
+.p-dia { background: var(--c); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); filter: drop-shadow(0 0 6px var(--c)); }
+@keyframes floatUp {
+  0%   { transform: translate3d(0, 105vh, 0) rotate(0deg); opacity: 0; }
+  12%  { opacity: .75; }
+  88%  { opacity: .75; }
+  100% { transform: translate3d(var(--dx), -15vh, 0) rotate(360deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .particles { display: none; } }
 @media (max-width: 700px) { .hero { min-height: 150px; padding: 1rem; } .hero-text { max-width: 100%; } }
 """.replace("__HERO__", _hero_background()).replace("__TROPHY__", _uri(TROPHY)) + av + "</style>"
+
+
+def particles_html(n=36):
+    """Slowly rising dots, rings, squares and diamonds. Pure CSS, so there is no script and nothing to load."""
+    rnd = random.Random(21)
+    colours = ["#ff9ff3", "#7cf9ff", "#ffe66d", "#3ddc84", "#c3b5ff", "#ff7a59"]
+    shapes = ["p-dot", "p-dot", "p-ring", "p-sq", "p-dia"]
+    items = []
+    for _ in range(n):
+        size = rnd.choice([6, 8, 10, 14, 18, 24])
+        dur = rnd.randint(16, 38)
+        style = (f"left:{rnd.randint(1, 98)}%;width:{size}px;height:{size}px;--c:{rnd.choice(colours)};"
+                 f"--dx:{rnd.randint(-90, 90)}px;animation-duration:{dur}s;animation-delay:-{rnd.randint(0, dur)}s")
+        items.append(f'<div class="p {rnd.choice(shapes)}" style="{style}"></div>')
+    return '<div class="particles">' + "".join(items) + "</div>"
 
 
 def hero_html(name, tagline):

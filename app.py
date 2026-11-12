@@ -21,7 +21,7 @@ st.set_page_config(page_title="ARticulate", page_icon="🥽")
 
 APP_NAME = "ARticulate"
 TAGLINE = "Step into your interview. Answer out loud, earn XP, level up."
-st.markdown(art.build_css(), unsafe_allow_html=True)
+st.markdown(art.build_css() + art.particles_html(), unsafe_allow_html=True)
 
 DAILY_LIMIT = int(secret("DAILY_LIMIT", 10))  # answers per student per day (protects the free AI quota)
 LLM_MODEL = secret("GROQ_LLM_MODEL", "openai/gpt-oss-20b")
