@@ -46,11 +46,14 @@ GLASS_CSS = """
   radial-gradient(circle at 60% 105%, rgba(255, 60, 172, .26) 0, transparent 45%), #06031a; }
 [data-testid="stAppViewContainer"], [data-testid="stMain"], .stMain { background: transparent !important; }
 
-/* the frosted app bar */
-header[data-testid="stHeader"] {
-  background: linear-gradient(180deg, rgba(18, 10, 44, .55), rgba(18, 10, 44, .22)) !important;
-  backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border-bottom: 1px solid var(--glass-edge-soft); }
+/* no app bar: the strip above the content and the sidebar stays completely clear, so the
+   video runs edge to edge instead of being cut by a shaded band (covers every spelling of
+   the header plus Streamlit's toolbar, top decoration line and status widget) */
+header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stToolbar"],
+[data-testid="stDecoration"], [data-testid="stStatusWidget"], [data-testid="stSidebarCollapsedControl"] {
+  background: transparent !important; background-color: transparent !important;
+  background-image: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  border: 0 !important; box-shadow: none !important; }
 
 /* the main content stage: translucent pane so text stays legible over the video
    (tint only -- no backdrop-filter here, see the note at the top of this file) */
@@ -264,7 +267,7 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
 @supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
   [data-testid="stDataFrame"], [data-testid="stFileUploaderDropzone"], [data-testid="stAlert"],
-  header[data-testid="stHeader"], button[data-testid^="stBaseButton"] {
+  button[data-testid^="stBaseButton"] {
     background: linear-gradient(160deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04)), rgba(20, 12, 48, .9) !important; }
   /* no blur available, so the sidebar keeps a flat tint but stays translucent */
   section[data-testid="stSidebar"], [data-testid="stSidebar"], #stSidebar {
@@ -280,7 +283,7 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
    and keeping a lighter tint instead -- still translucent, just sharper. */
 @media (prefers-reduced-transparency: reduce) {
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
-  [data-testid="stAlert"], header[data-testid="stHeader"] {
+  [data-testid="stAlert"] {
     backdrop-filter: none; -webkit-backdrop-filter: none;
     background: linear-gradient(160deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .03)),
                 rgba(18, 11, 44, .42) !important; }
@@ -302,7 +305,7 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
   .hero { min-height: 150px; padding: .8rem; } .hero-text { max-width: 100%; padding: .7rem .9rem; }
   /* blur is the expensive part -- soften it on phones */
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
-  [data-testid="stAlert"], header[data-testid="stHeader"] { backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%); }
+  [data-testid="stAlert"] { backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%); }
   section[data-testid="stSidebar"], #stSidebar { backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); }
 }
 </style>
