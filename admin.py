@@ -5,6 +5,7 @@ from datetime import datetime
 
 import streamlit as st
 
+import art
 from bulk import clean_username, parse_questions, parse_students
 from db import (DBConflict, DBError, IST, db, add_questions, all_progress, attempts_overview, clear_questions,
                 create_user, create_users_bulk, delete_questions, delete_student, existing_usernames,
@@ -31,6 +32,7 @@ def fmt_ts(value):
 
 # ---------------- students ----------------
 def students_tab():
+    st.markdown(art.section_title("students", "Students", "accounts, passwords, access"), unsafe_allow_html=True)
     st.subheader("Add one student")
     with st.form("add_one", clear_on_submit=True):
         c1, c2, c3 = st.columns(3)
@@ -130,6 +132,7 @@ def _add_new(qs, who):
 
 
 def bank_tab(who):
+    st.markdown(art.section_title("bank", "Question bank", "bulk upload and editing"), unsafe_allow_html=True)
     st.subheader("Add questions in bulk")
     st.caption("CSV or Excel file with the columns: question, category (optional), key points (optional). "
                "A plain text file with one question per line also works. Key points are never shown to students; "
@@ -192,6 +195,8 @@ def results_tab():
         d["last"] = max(d["last"], a["created_at"])
     xp = {p["username"]: p["xp"] for p in all_progress()}
     names = sorted(set(students) | set(stats))
+    st.markdown(art.section_title("results", "Results", f"{len(names)} student{'s' if len(names) != 1 else ''}"),
+                unsafe_allow_html=True)
     if not names:
         st.info("No results yet. They appear here as soon as students answer questions.")
         return
@@ -232,10 +237,10 @@ def results_tab():
 
 # ---------------- entry point ----------------
 def render_admin(who):
-    st.header("🛠️ Teacher panel")
+    st.markdown(art.section_title("panel", "Teacher panel"), unsafe_allow_html=True)
     try:
         db("GET", "users", {"select": "username", "limit": "1"})  # connection test
-        t1, t2, t3 = st.tabs(["👩‍🎓 Students", "📚 Question bank", "📊 Results"])
+        t1, t2, t3 = st.tabs(["Students", "Question bank", "Results"])
         with t1:
             students_tab()
         with t2:
