@@ -122,64 +122,6 @@ AVATARS = [
 ]
 
 
-def _icon(inner, defs=""):
-    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs>{defs}</defs>{inner}</svg>'
-
-
-_LENS = '<radialGradient id="l" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#d6fbff"/><stop offset=".5" stop-color="#3fb7ff"/><stop offset="1" stop-color="#3a1fc9"/></radialGradient>'
-_BODY = '<linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a6dff"/><stop offset="1" stop-color="#2a1a9e"/></linearGradient>'
-_RING = '<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9ff3"/><stop offset="1" stop-color="#7cf9ff"/></linearGradient>'
-
-ICONS = {
-    "headset": _icon(
-        '<path d="M9 26 C2 26 2 42 9 42" stroke="#ff9ff3" stroke-width="4" fill="none" stroke-linecap="round"/>'
-        '<path d="M55 26 C62 26 62 42 55 42" stroke="#ff9ff3" stroke-width="4" fill="none" stroke-linecap="round"/>'
-        '<path d="M18 18 C28 7 36 7 46 18" stroke="#7cf9ff" stroke-width="3.5" fill="none" stroke-linecap="round"/>'
-        '<rect x="8" y="19" width="48" height="26" rx="10" fill="url(#b)" stroke="#fff" stroke-opacity=".7" stroke-width="1.5"/>'
-        '<rect x="12" y="23" width="40" height="18" rx="7" fill="#0b0720"/>'
-        '<circle cx="24" cy="32" r="6.5" fill="url(#l)"/><circle cx="40" cy="32" r="6.5" fill="url(#l)"/>'
-        '<circle cx="22" cy="30" r="2" fill="#fff" opacity=".8"/><circle cx="38" cy="30" r="2" fill="#fff" opacity=".8"/>'
-        '<rect x="27" y="21" width="10" height="2" rx="1" fill="#ffe66d"/>', _LENS + _BODY),
-    "glasses": _icon(
-        '<rect x="6" y="24" width="22" height="16" rx="7" fill="#7cf9ff" fill-opacity=".45" stroke="#7cf9ff" stroke-width="3"/>'
-        '<rect x="36" y="24" width="22" height="16" rx="7" fill="#ff9ff3" fill-opacity=".45" stroke="#ff9ff3" stroke-width="3"/>'
-        '<path d="M28 31 H36" stroke="#fff" stroke-width="3"/><path d="M6 28 L1 23 M58 28 L63 23" stroke="#fff" stroke-width="3" stroke-linecap="round"/>'
-        '<path d="M11 31 H23 M11 35 H19" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>'
-        '<circle cx="48" cy="31" r="3" fill="#ffe66d"/><circle cx="32" cy="14" r="2.5" fill="#fff"/><circle cx="22" cy="17" r="1.6" fill="#ffe66d"/><circle cx="43" cy="16" r="1.6" fill="#7cf9ff"/>'),
-    "controller": _icon(
-        '<path d="M14 36 A17 17 0 1 1 40 30" fill="none" stroke="url(#g)" stroke-width="5" stroke-linecap="round"/>'
-        '<rect x="27" y="24" width="17" height="36" rx="8.5" transform="rotate(-16 35 42)" fill="url(#g)" stroke="#fff" stroke-opacity=".7" stroke-width="1.5"/>'
-        '<circle cx="34" cy="34" r="4.5" fill="#1b1464" stroke="#fff" stroke-width="1.5"/>'
-        '<circle cx="38" cy="45" r="2.4" fill="#ffe66d"/><circle cx="32" cy="48" r="2.4" fill="#3ddc84"/>'
-        '<circle cx="10" cy="26" r="2.2" fill="#fff"/><circle cx="20" cy="12" r="2.2" fill="#fff"/><circle cx="35" cy="9" r="2.2" fill="#fff"/>', _RING),
-    "cube": _icon(_cube(32, 10, 20, "#ffe66d", "#ff9f1c", "#e85d04")),
-    "wirecube": _icon(_wire_cube(32, 10, 20, "#7cf9ff", 2.6, 1)),
-    "marker": _icon(
-        '<path d="M7 20 V7 H20 M44 7 H57 V20 M57 44 V57 H44 M20 57 H7 V44" stroke="#ffe66d" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
-        '<path d="M32 22 V42 M22 32 H42" stroke="#7cf9ff" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3.5" fill="#ff9ff3"/>'),
-    "pyramid": _icon(
-        '<polygon points="32,6 8,46 56,46" fill="#7cf9ff" fill-opacity=".18" stroke="#7cf9ff" stroke-width="2.6" stroke-linejoin="round"/>'
-        '<path d="M32 6 L32 46 M8 46 L32 58 L56 46 M32 6 L32 58" stroke="#ff9ff3" stroke-width="2.2" fill="none" stroke-linejoin="round" opacity=".95"/>'
-        '<path d="M14 61 H50" stroke="#ffe66d" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="4 4"/>'),
-    "gizmo": _icon(
-        '<path d="M32 36 L55 47" stroke="#ff5c7a" stroke-width="4" stroke-linecap="round"/><polygon points="58,48.5 49,48 53,42" fill="#ff5c7a"/>'
-        '<path d="M32 36 V9" stroke="#3ddc84" stroke-width="4" stroke-linecap="round"/><polygon points="32,5 27,13 37,13" fill="#3ddc84"/>'
-        '<path d="M32 36 L11 49" stroke="#4da3ff" stroke-width="4" stroke-linecap="round"/><polygon points="7,51.5 16,51 12,44" fill="#4da3ff"/>'
-        '<circle cx="32" cy="36" r="4.5" fill="#fff"/>'),
-    "phone": _icon(
-        '<rect x="17" y="4" width="30" height="56" rx="7" fill="#1b1464" stroke="#fff" stroke-opacity=".75" stroke-width="2"/>'
-        '<rect x="21" y="11" width="22" height="42" rx="3" fill="#2c2a8a"/>'
-        + _cube(32, 20, 9, "#ffe66d", "#ff9f1c", "#e85d04") +
-        '<path d="M23 44 H41" stroke="#7cf9ff" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3"/><circle cx="32" cy="7.5" r="1.4" fill="#fff"/>'),
-    "scan": _icon(
-        '<circle cx="32" cy="32" r="27" fill="none" stroke="#7cf9ff" stroke-width="3.5" stroke-dasharray="16 9" stroke-linecap="round"/>'
-        '<circle cx="32" cy="32" r="17" fill="none" stroke="#ff9ff3" stroke-width="3.5" stroke-dasharray="9 7" stroke-linecap="round"/>'
-        '<circle cx="32" cy="32" r="7" fill="none" stroke="#ffe66d" stroke-width="3"/><circle cx="32" cy="32" r="2.6" fill="#fff"/>'),
-}
-# how each icon moves: sway = gentle tilt, spin3d = turns around like a 3D object, spin = flat rotation
-ICON_MOTION = {"headset": "sway", "glasses": "sway", "controller": "sway", "phone": "sway", "marker": "sway",
-               "cube": "spin3d", "wirecube": "spin3d", "pyramid": "spin3d", "gizmo": "spin3d", "scan": "spin"}
-
 TROPHY = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs>'
           '<linearGradient id="t" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe66d"/><stop offset="1" stop-color="#ff7a59"/></linearGradient></defs>'
           '<path d="M20 10 H44 V28 C44 38 38 43 32 43 C26 43 20 38 20 28 Z" fill="url(#t)" stroke="#fff" stroke-width="2"/>'
@@ -198,7 +140,6 @@ def _hero_background():
 
 
 def build_css():
-    pv = "".join(f".pv-{name}{{background-image:url({_uri(svg)});}}\n" for name, svg in ICONS.items())
     av = "".join(f".av{i + 1}{{background-image:url({_uri(s)});}}\n" for i, s in enumerate(AVATARS))
     return """<style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -265,53 +206,32 @@ div.stButton > button:hover, div.stDownloadButton > button:hover { background: l
 .p { position: absolute; top: 0; left: 0; opacity: 0; animation-timing-function: linear; animation-iteration-count: infinite;
      will-change: transform, opacity; }
 .p-dot { border-radius: 50%; background: var(--c); box-shadow: 0 0 12px var(--c); animation-name: floatUp; }
-.pv { background-size: contain; background-repeat: no-repeat; background-position: center;
-      filter: drop-shadow(0 0 7px rgba(124,249,255,.6)); }
-.m-sway { animation-name: floatSway; } .m-spin3d { animation-name: floatSpin3d; } .m-spin { animation-name: floatUp; }
 @keyframes floatUp {
   0%   { transform: translate3d(0, 105vh, 0) rotate(0deg); opacity: 0; }
   12%  { opacity: var(--o, .8); } 88% { opacity: var(--o, .8); }
   100% { transform: translate3d(var(--dx), -15vh, 0) rotate(360deg); opacity: 0; }
 }
-@keyframes floatSway {
-  0%   { transform: translate3d(0, 105vh, 0) rotate(calc(var(--rot) * -1)); opacity: 0; }
-  12%  { opacity: var(--o, .8); }
-  50%  { transform: translate3d(calc(var(--dx) * .5), 45vh, 0) rotate(var(--rot)); }
-  88%  { opacity: var(--o, .8); }
-  100% { transform: translate3d(var(--dx), -15vh, 0) rotate(calc(var(--rot) * -1)); opacity: 0; }
-}
-@keyframes floatSpin3d {
-  0%   { transform: translate3d(0, 105vh, 0) perspective(500px) rotateY(0deg); opacity: 0; }
-  12%  { opacity: var(--o, .8); } 88% { opacity: var(--o, .8); }
-  100% { transform: translate3d(var(--dx), -15vh, 0) perspective(500px) rotateY(540deg); opacity: 0; }
-}
 @media (prefers-reduced-motion: reduce) { .particles { display: none; } .bgvid { display: none; } .bgloop .glow { animation: none; } }
 @media (max-width: 700px) { .hero { min-height: 150px; padding: 1rem; } .hero-text { max-width: 100%; } }
-""".replace("__HERO__", _hero_background()).replace("__TROPHY__", _uri(TROPHY)) + av + pv + "</style>"
+""".replace("__HERO__", _hero_background()).replace("__TROPHY__", _uri(TROPHY)) + av + "</style>"
 
 
-def particles_html(icons=24, sparkles=14):
-    """Slowly rising AR/VR objects (headsets, glasses, controllers, cubes, markers...) plus tiny glowing data dots.
-    Pure CSS, so there is no script and nothing to load. Big ones are 'closer' (faster, brighter), small ones 'farther'."""
+def particles_html(sparkles=40):
+    """Slowly rising glowing data dots -- the only thing floating in front of the background video.
+
+    Pure CSS, so there is no script and nothing to load. Small dots read as 'farther' (dimmer,
+    slower, softer); big ones as 'closer' (brighter, faster)."""
     rnd = random.Random(21)
-    names = ["headset", "headset", "glasses", "glasses", "controller", "controller", "cube", "wirecube", "wirecube",
-             "marker", "pyramid", "gizmo", "phone", "scan"]
+    colours = ["#ff9ff3", "#e04bff", "#b14bff", "#c3b5ff", "#7cf9ff", "#ffe66d"]
     items = []
-    for _ in range(icons):
-        name = rnd.choice(names)
-        size = rnd.choice([30, 36, 42, 48, 56, 64])
-        dur = int(46 - (size - 30) * 0.5) + rnd.randint(-3, 4)          # bigger = closer = faster
-        op = round(0.42 + (size - 30) / 34 * 0.38, 2)                   # bigger = brighter
-        blur = "filter:blur(.7px) drop-shadow(0 0 7px rgba(124,249,255,.5));" if size <= 36 else ""
-        style = (f"left:{rnd.randint(1, 94)}%;width:{size}px;height:{size}px;--dx:{rnd.randint(-80, 80)}px;"
-                 f"--rot:{rnd.randint(8, 22)}deg;--o:{op};animation-duration:{dur}s;animation-delay:-{rnd.randint(0, dur)}s;{blur}")
-        items.append(f'<div class="p pv pv-{name} m-{ICON_MOTION[name]}" style="{style}"></div>')
-    colours = ["#ff9ff3", "#7cf9ff", "#ffe66d", "#3ddc84", "#c3b5ff"]
     for _ in range(sparkles):
-        size = rnd.choice([3, 4, 5, 6])
-        dur = rnd.randint(24, 44)
-        style = (f"left:{rnd.randint(1, 98)}%;width:{size}px;height:{size}px;--c:{rnd.choice(colours)};--o:.7;"
-                 f"--dx:{rnd.randint(-40, 40)}px;animation-duration:{dur}s;animation-delay:-{rnd.randint(0, dur)}s")
+        size = rnd.choice([2, 3, 3, 4, 4, 5, 6, 7])
+        dur = rnd.choice([24, 32, 40, 48]) + rnd.randint(-2, 2)          # near = faster
+        op = round(0.35 + (size - 2) / 5 * 0.45, 2)                      # near = brighter
+        blur = "filter:blur(.6px);" if size <= 3 else ""
+        style = (f"left:{rnd.randint(1, 98)}%;width:{size}px;height:{size}px;--c:{rnd.choice(colours)};"
+                 f"--o:{op};--dx:{rnd.randint(-50, 50)}px;animation-duration:{dur}s;"
+                 f"animation-delay:-{rnd.randint(0, dur)}s;{blur}")
         items.append(f'<div class="p p-dot" style="{style}"></div>')
     return '<div class="particles">' + "".join(items) + "</div>"
 
