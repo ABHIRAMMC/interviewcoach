@@ -204,6 +204,64 @@ def splash_html(name="", title="ARticulate"):
             '</div></div>')
 
 
+# ---------------- section icons (teacher panel + anywhere a custom glyph is wanted) ----------------
+_DEFS = ('<defs>'
+         '<linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">'
+         '<stop offset="0" stop-color="#ff9ff3"/><stop offset="1" stop-color="#7cf9ff"/></linearGradient>'
+         '<linearGradient id="qy" x1="0" y1="0" x2="1" y2="1">'
+         '<stop offset="0" stop-color="#ffe66d"/><stop offset="1" stop-color="#ff7a59"/></linearGradient>'
+         '</defs>')
+
+ICON_ART = {
+    # question bank: a stack of question cards with a glowing "?"
+    "bank": _DEFS +
+            '<rect x="8" y="22" width="38" height="28" rx="7" fill="#1b1464" stroke="url(#qg)" '
+            'stroke-width="2.5" transform="rotate(-7 27 36)"/>'
+            '<rect x="17" y="15" width="40" height="30" rx="7" fill="#241a52" stroke="url(#qg)" stroke-width="2.5"/>'
+            '<path d="M30 25 C30 19 42 19 42 26 C42 31 35 32 35 37" stroke="url(#qy)" stroke-width="3.6" '
+            'fill="none" stroke-linecap="round"/>'
+            '<circle cx="35" cy="41.5" r="2.6" fill="#ffe66d"/>',
+    # students: two glowing learners
+    "students": _DEFS +
+                '<circle cx="23" cy="23" r="8.5" fill="url(#qg)"/>'
+                '<path d="M9 51 C9 40 15 35 23 35 C31 35 37 40 37 51 Z" fill="#1b1464" stroke="url(#qg)" stroke-width="2.5"/>'
+                '<circle cx="45" cy="26" r="6.5" fill="#7cf9ff" opacity=".92"/>'
+                '<path d="M36 51 C36 43 40 39 45 39 C51 39 56 43 56 51 Z" fill="#1b1464" stroke="#7cf9ff" stroke-width="2"/>',
+    # results: three bars with a rising trend line
+    "results": _DEFS +
+               '<rect x="10" y="36" width="9" height="17" rx="2.5" fill="#7cf9ff"/>'
+               '<rect x="24" y="27" width="9" height="26" rx="2.5" fill="#ff9ff3"/>'
+               '<rect x="38" y="17" width="9" height="36" rx="2.5" fill="#ffe66d"/>'
+               '<path d="M9 27 L23 18 L34 21 L51 10" stroke="#3ddc84" stroke-width="3" fill="none" '
+               'stroke-linecap="round" stroke-linejoin="round"/>'
+               '<polygon points="55,7 46,8 51,17" fill="#3ddc84"/>',
+    # teacher panel: a neon gear
+    "panel": _DEFS +
+             '<circle cx="32" cy="32" r="19" fill="none" stroke="#ffe66d" stroke-width="6" '
+             'stroke-dasharray="5 9" stroke-linecap="round"/>'
+             '<circle cx="32" cy="32" r="12" fill="#1b1464" stroke="url(#qg)" stroke-width="3"/>'
+             '<circle cx="32" cy="32" r="4.5" fill="#7cf9ff"/>',
+}
+ICON_URI = {name: _uri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' + svg + "</svg>")
+            for name, svg in ICON_ART.items()}
+
+
+def icon_html(name, size=34):
+    """Inline <span> carrying one of the custom section icons (as a data URI, nothing to load)."""
+    uri = ICON_URI.get(name)
+    if not uri:
+        return ""
+    return (f'<span class="secttl-ic" style="width:{size}px;height:{size}px;'
+            f'background-image:url({uri})"></span>')
+
+
+def section_title(icon, text, meta=""):
+    """Glass section header: custom icon + arcade title, with an optional right-aligned note."""
+    meta_html = f'<span class="secttl-meta">{html.escape(meta)}</span>' if meta else ""
+    return (f'<div class="secttl">{icon_html(icon)}'
+            f'<span class="secttl-nm">{html.escape(text)}</span>{meta_html}</div>')
+
+
 def hero_html(name, tagline):
     return (f'<div class="hero"><div class="hero-text"><div class="hero-title">🥽 {html.escape(name)}</div>'
             f'<div class="hero-sub">{html.escape(tagline)}</div></div></div>')

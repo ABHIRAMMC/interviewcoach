@@ -136,6 +136,20 @@ p, li, [data-testid="stMarkdownContainer"] { color: var(--ink); }
 [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p { color: var(--ink-dim) !important; }
 [data-testid="stMetricValue"] { color: #7cf9ff; }
 
+/* ============================== section titles ============================== */
+/* glass header strip carrying one of the custom neon icons (art.section_title) */
+.secttl { display: flex; align-items: center; gap: .7rem; margin: .1rem 0 1rem; padding: .55rem .9rem;
+          border-radius: 16px;
+          background: var(--glass-sheen), rgba(26, 16, 60, .34);
+          border: 1px solid var(--glass-edge-soft);
+          box-shadow: 0 10px 26px rgba(5, 2, 18, .35), inset 0 1px 0 rgba(255, 255, 255, .18);
+          backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%); }
+.secttl-ic { display: block; flex: none; background-size: contain; background-repeat: no-repeat;
+             background-position: center; filter: drop-shadow(0 0 10px rgba(124, 249, 255, .45)); }
+.secttl-nm { font-family: 'Press Start 2P', monospace; font-size: .78rem; color: #fff; letter-spacing: .5px;
+             line-height: 1.5; text-shadow: 0 0 14px rgba(124, 249, 255, .55), 2px 2px 0 rgba(255, 60, 172, .5); }
+.secttl-meta { margin-left: auto; font-size: .78rem; color: var(--ink-dim); text-align: right; }
+
 /* ============================== form widgets ============================== */
 div[data-baseweb="input"], div[data-baseweb="textarea"],
 [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input, [data-testid="stTextArea"] textarea,
@@ -289,7 +303,7 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
 
 /* ============================== graceful degradation ============================== */
 @supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
-  .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
+  .quest, .hero-text, .secttl, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
   [data-testid="stDataFrame"], [data-testid="stFileUploaderDropzone"], [data-testid="stAlert"],
   button[data-testid^="stBaseButton"] {
     background: linear-gradient(160deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04)), rgba(20, 12, 48, .9) !important; }
@@ -306,7 +320,7 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
    panels here silently cancelled every transparency request, so honour it by removing the blur
    and keeping a lighter tint instead -- still translucent, just sharper. */
 @media (prefers-reduced-transparency: reduce) {
-  .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
+  .quest, .hero-text, .secttl, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
   [data-testid="stAlert"] {
     backdrop-filter: none; -webkit-backdrop-filter: none;
     background: linear-gradient(160deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .03)),
@@ -329,8 +343,9 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
 @media (max-width: 900px) {
   [data-testid="stMainBlockContainer"], .block-container { padding: 1.2rem 1rem 2rem; border-radius: 20px; margin: 3.6rem .4rem 1.4rem; }
   .hero { min-height: 150px; padding: .8rem; } .hero-text { max-width: 100%; padding: .7rem .9rem; }
+  .secttl-nm { font-size: .66rem; } .secttl-meta { display: none; }
   /* blur is the expensive part -- soften it on phones */
-  .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
+  .quest, .hero-text, .secttl, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
   [data-testid="stAlert"] { backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%); }
   section[data-testid="stSidebar"], #stSidebar { backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); }
 }
