@@ -280,12 +280,17 @@ if st.session_state.user is None:
             st.session_state.account_role = acct["role"]
             if acct["role"] == "student":
                 touch_login(acct["username"])
+            st.session_state.splash_pending = True   # loading veil on the next run
             st.rerun()
         else:
             st.session_state.fails += 1
             time.sleep(1)
             st.error("Wrong ID or password.")
     st.stop()
+
+if st.session_state.pop("splash_pending", False):
+    st.markdown(art.splash_html(st.session_state.get("name", ""), APP_NAME), unsafe_allow_html=True)
+
 
 # ---------------- Game helpers ----------------
 OTHER_ROLE = "Other (type my own)"

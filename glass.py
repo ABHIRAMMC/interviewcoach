@@ -263,6 +263,30 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
   100% { transform: translate3d(var(--dx), -15vh, 0) rotate(360deg); opacity: 0; }
 }
 
+/* ============================== post-login splash ============================== */
+/* Rendered once right after a successful sign-in. It fades itself out, so the caller does
+   not need a sleep+rerun loop (which would re-run every query on the page for 2 seconds). */
+.splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+          background: radial-gradient(circle at 50% 42%, rgba(124, 77, 255, .38), rgba(6, 3, 26, .86) 72%);
+          backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%);
+          animation: splashOut .7s ease 1.7s forwards; pointer-events: none; }
+.splash-card { display: grid; justify-items: center; gap: .85rem; padding: 2rem 2.4rem; border-radius: 24px;
+               background: var(--glass-sheen), var(--glass-tint);
+               border: 1px solid var(--glass-edge); box-shadow: var(--glass-shadow); }
+.splash-logo { width: 92px; height: 92px; background-size: contain; background-repeat: no-repeat;
+               background-position: center; filter: drop-shadow(0 0 18px rgba(124, 249, 255, .55));
+               animation: splashBob 2.4s ease-in-out infinite; }
+.splash-title { font-family: 'Press Start 2P', monospace; font-size: 1.3rem; color: #fff; line-height: 1.4;
+                text-shadow: 0 0 18px rgba(124, 249, 255, .85), 3px 3px 0 #ff3cac; }
+.splash-sub { color: var(--ink-dim); font-size: .92rem; letter-spacing: .2px; text-align: center; }
+.splash-bar { width: 220px; height: 6px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, .14); }
+.splash-bar i { display: block; height: 100%; width: 42%; border-radius: 999px;
+                background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+                animation: splashSlide 1.05s ease-in-out infinite; }
+@keyframes splashSlide { 0% { transform: translateX(-115%); } 100% { transform: translateX(285%); } }
+@keyframes splashBob { 0%, 100% { transform: translateY(-3px); } 50% { transform: translateY(4px); } }
+@keyframes splashOut { to { opacity: 0; visibility: hidden; } }
+
 /* ============================== graceful degradation ============================== */
 @supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
@@ -299,6 +323,8 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
 @media (prefers-reduced-motion: reduce) {
   .particles { display: none; } .bgvid { display: none; } .bgloop .glow { animation: none; }
   div.stButton > button, button[data-testid^="stBaseButton"] { transition: none; }
+  .splash { animation: splashOut .25s ease .6s forwards; }
+  .splash-logo, .splash-bar i { animation: none; } .splash-bar i { width: 100%; }
 }
 @media (max-width: 900px) {
   [data-testid="stMainBlockContainer"], .block-container { padding: 1.2rem 1rem 2rem; border-radius: 20px; margin: 3.6rem .4rem 1.4rem; }
