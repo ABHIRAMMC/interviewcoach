@@ -56,7 +56,9 @@ header[data-testid="stHeader"] {
 
 /* ============================== sidebar ============================== */
 section[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, rgba(124, 77, 255, .34) 0%, rgba(28, 30, 96, .40) 52%, rgba(10, 58, 92, .38) 100%), rgba(12, 8, 34, .55) !important;
+  /* ~81% opaque, i.e. well under 50% transparency: the panel reads as a solid slab, with the
+     gradient reduced to a faint violet/teal sheen so it no longer looks washed out */
+  background: linear-gradient(180deg, rgba(124, 77, 255, .16) 0%, rgba(28, 30, 96, .16) 52%, rgba(10, 58, 92, .16) 100%), rgba(12, 8, 34, .78) !important;
   backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
   border-right: 1px solid var(--glass-edge-soft);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, .06); }
