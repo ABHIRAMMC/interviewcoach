@@ -56,9 +56,9 @@ header[data-testid="stHeader"] {
 
 /* ============================== sidebar ============================== */
 section[data-testid="stSidebar"] {
-  /* ~81% opaque, i.e. well under 50% transparency: the panel reads as a solid slab, with the
-     gradient reduced to a faint violet/teal sheen so it no longer looks washed out */
-  background: linear-gradient(180deg, rgba(124, 77, 255, .16) 0%, rgba(28, 30, 96, .16) 52%, rgba(10, 58, 92, .16) 100%), rgba(12, 8, 34, .78) !important;
+  /* 30% transparent / 70% opaque. The two layers stack, so the sheen is not free:
+     1 - (1 - .65) * (1 - .14) = .699. Just setting the base to .70 would land at ~74% opaque. */
+  background: linear-gradient(180deg, rgba(124, 77, 255, .14) 0%, rgba(28, 30, 96, .14) 52%, rgba(10, 58, 92, .14) 100%), rgba(12, 8, 34, .65) !important;
   backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
   border-right: 1px solid var(--glass-edge-soft);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, .06); }
