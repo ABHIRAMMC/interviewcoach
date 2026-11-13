@@ -391,7 +391,7 @@ if db_configured():
         bank = list_questions_cached()
     except DBError as e:
         st.sidebar.warning(f"The question bank is unavailable. {e}")
-sources = (["Question bank"] if bank else []) + ["AI-generated", "My own questions"]
+sources = (["Question bank"] if bank else []) + ["Take-Your-Test", "My own questions"]
 
 with st.sidebar:
     game_panel = st.empty()
@@ -403,7 +403,7 @@ with st.sidebar:
         cat_choice = st.selectbox("Category", ["All"] + cats)
         role, kind, level = "BCA student", "interview", "fresher"
     else:
-        if source == "AI-generated":
+        if source == "AI-generated"or"Take-Your-Test":
             boss = st.toggle("⚔️ Boss round (harder questions)")
         role_choice = st.selectbox("Role", ROLE_PRESETS)
         if role_choice == OTHER_ROLE:
