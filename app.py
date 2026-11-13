@@ -391,7 +391,7 @@ if db_configured():
         bank = list_questions_cached()
     except DBError as e:
         st.sidebar.warning(f"The question bank is unavailable. {e}")
-sources = (["Question bank"] if bank else []) + ["AI-generated", "My own questions"]
+sources = (["Question bank"] if bank else []) + ["Take your test", "My own questions"]
 
 with st.sidebar:
     game_panel = st.empty()
@@ -403,7 +403,7 @@ with st.sidebar:
         cat_choice = st.selectbox("Category", ["All"] + cats)
         role, kind, level = "BCA student", "interview", "fresher"
     else:
-        if source == "AI-generated":
+        if source == "Take your test":
             boss = st.toggle("⚔️ Boss round (harder questions)")
         role_choice = st.selectbox("Role", ROLE_PRESETS)
         if role_choice == OTHER_ROLE:
@@ -463,7 +463,7 @@ if source == "Question bank":
     question_id = chosen["id"]
     kind = chosen.get("category") or "interview"
     audio_key = f"audio_bank_{question_id}"
-elif source == "AI-generated":
+elif source == "Take your test":
     if st.button("🎲 New quest") or st.session_state.question is None:
         with st.spinner("Rolling a new quest..."):
             make_question()
