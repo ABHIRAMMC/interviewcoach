@@ -30,6 +30,10 @@ GLASS_CSS = """
                   inset 0 1px 0 rgba(255, 255, 255, .32),
                   inset 0 -1px 0 rgba(255, 255, 255, .05);
   --glass-sheen: linear-gradient(160deg, var(--glass-hi) 0%, var(--glass-lo) 46%, rgba(255, 255, 255, .02) 100%);
+  /* sidebar glass. Effective transparency = (1 - --sidebar-alpha) * (1 - --sidebar-sheen-alpha),
+     e.g. the defaults below give (1 - .19) * (1 - .10) = 0.729 -> ~73% transparent. */
+  --sidebar-alpha: .19;
+  --sidebar-sheen-alpha: .10;
 }
 
 /* ============================== app shell ============================== */
@@ -55,17 +59,24 @@ header[data-testid="stHeader"] {
   box-shadow: 0 24px 60px rgba(4, 2, 14, .45), inset 0 1px 0 rgba(255, 255, 255, .18); }
 
 /* ============================== sidebar ============================== */
-section[data-testid="stSidebar"] {
-  /* 30% transparent / 70% opaque. The two layers stack, so the sheen is not free:
-     1 - (1 - .65) * (1 - .14) = .699. Just setting the base to .70 would land at ~74% opaque. */
-  background: linear-gradient(180deg, rgba(124, 77, 255, .14) 0%, rgba(28, 30, 96, .14) 52%, rgba(10, 58, 92, .14) 100%), rgba(12, 8, 34, .65) !important;
+section[data-testid="stSidebar"], [data-testid="stSidebar"], #stSidebar {
+  background:
+    linear-gradient(180deg,
+      rgb(124 77 255 / var(--sidebar-sheen-alpha)) 0%,
+      rgb(28 30 96 / var(--sidebar-sheen-alpha)) 52%,
+      rgb(10 58 92 / var(--sidebar-sheen-alpha)) 100%),
+    rgb(12 8 34 / var(--sidebar-alpha)) !important;
   backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
   border-right: 1px solid var(--glass-edge-soft);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, .06); }
-[data-testid="stSidebarContent"], [data-testid="stSidebarUserContent"], section[data-testid="stSidebar"] > div:first-child {
+[data-testid="stSidebarContent"], [data-testid="stSidebarUserContent"],
+section[data-testid="stSidebar"] > div:first-child, #stSidebar > div:first-child {
   background: transparent !important; }
+/* at this transparency the video blooms behind the labels, so they get a soft halo to stay legible */
 section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] p { color: var(--ink) !important; }
+section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] p,
+#stSidebar h1, #stSidebar h2, #stSidebar h3, #stSidebar label, #stSidebar p {
+  color: var(--ink) !important; text-shadow: 0 1px 8px rgba(4, 2, 16, .85), 0 0 18px rgba(4, 2, 16, .55); }
 
 /* ============================== typography ============================== */
 h1, h2, h3, h4 { color: var(--ink); letter-spacing: .2px; }
@@ -250,12 +261,12 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
 @supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
   [data-testid="stDataFrame"], [data-testid="stFileUploaderDropzone"], [data-testid="stAlert"],
-  section[data-testid="stSidebar"], header[data-testid="stHeader"], button[data-testid^="stBaseButton"] {
+  section[data-testid="stSidebar"], #stSidebar, header[data-testid="stHeader"], button[data-testid^="stBaseButton"] {
     background: linear-gradient(160deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04)), rgba(20, 12, 48, .9) !important; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
-  [data-testid="stAlert"], section[data-testid="stSidebar"], header[data-testid="stHeader"] {
+  [data-testid="stAlert"], section[data-testid="stSidebar"], #stSidebar, header[data-testid="stHeader"] {
     backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(18, 11, 44, .93) !important; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -268,7 +279,7 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
   /* blur is the expensive part -- soften it on phones */
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
   [data-testid="stAlert"], header[data-testid="stHeader"] { backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%); }
-  section[data-testid="stSidebar"] { backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); }
+  section[data-testid="stSidebar"], #stSidebar { backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); }
 }
 </style>
 """
