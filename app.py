@@ -391,7 +391,7 @@ if db_configured():
         bank = list_questions_cached()
     except DBError as e:
         st.sidebar.warning(f"The question bank is unavailable. {e}")
-sources = (["Question bank"] if bank else []) + ["TAKE YOUR TEST", "My own questions"]
+sources = (["Question bank"] if bank else []) + ["AI-generated", "My own questions"]
 
 with st.sidebar:
     game_panel = st.empty()
