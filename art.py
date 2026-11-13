@@ -185,6 +185,25 @@ def background_html():
             '<div class="glow g3"></div></div>' + tag + '<div class="bgscrim" aria-hidden="true"></div>')
 
 
+SPLASH_LOGO = _uri(AVATARS[1])   # the headset avatar doubles as the loading mark
+
+
+def splash_html(name="", title="ARticulate"):
+    """One-shot loading veil for the moment right after signing in.
+
+    The fade-out lives in CSS (see .splash in glass.py), so the caller renders this exactly
+    once -- no time.sleep/st.rerun loop, which would re-run every query on the page while it
+    counts down."""
+    who = f"Preparing your quest, {html.escape(name)}..." if name else "Preparing your quest..."
+    return ('<div class="splash" role="status" aria-live="polite">'
+            '<div class="splash-card">'
+            f'<div class="splash-logo" style="background-image:url({SPLASH_LOGO})"></div>'
+            f'<div class="splash-title">{html.escape(title)}</div>'
+            f'<div class="splash-sub">{who}</div>'
+            '<div class="splash-bar"><i></i></div>'
+            '</div></div>')
+
+
 def hero_html(name, tagline):
     return (f'<div class="hero"><div class="hero-text"><div class="hero-title">🥽 {html.escape(name)}</div>'
             f'<div class="hero-sub">{html.escape(tagline)}</div></div></div>')
