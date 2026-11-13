@@ -403,7 +403,7 @@ with st.sidebar:
         cat_choice = st.selectbox("Category", ["All"] + cats)
         role, kind, level = "BCA student", "interview", "fresher"
     else:
-        if source == "AI-generated"or"Take-Your-Test":
+        if source == "Take-Your-Test":
             boss = st.toggle("⚔️ Boss round (harder questions)")
         role_choice = st.selectbox("Role", ROLE_PRESETS)
         if role_choice == OTHER_ROLE:
