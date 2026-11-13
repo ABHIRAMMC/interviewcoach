@@ -5,6 +5,7 @@ import random
 from pathlib import Path
 
 ASSETS = Path(__file__).with_name("assets")
+STATIC = Path(__file__).with_name("static")   # served by Streamlit at app/static/<file>
 
 
 def _uri(svg):
@@ -236,6 +237,27 @@ div.stButton > button, div.stDownloadButton > button, button[kind="secondaryForm
   background: linear-gradient(135deg, #7c4dff, #16b7ff); color: #fff; border: 0; border-radius: 12px; font-weight: 700; }
 div.stButton > button:hover, div.stDownloadButton > button:hover { background: linear-gradient(135deg, #ff3cac, #7c4dff); color: #fff; box-shadow: 0 0 16px rgba(255,60,172,.65); }
 
+/* ---- looping background video (static/bg.mp4: magenta-purple particles in darkness) ----
+   Layers, back to front: CSS glow fallback (-4), video (-3), scrim (-2), AR/VR particles (-1). */
+.bgloop { position: fixed; inset: 0; z-index: -4; pointer-events: none; overflow: hidden; }
+.bgloop .glow { position: absolute; border-radius: 50%; filter: blur(50px); opacity: .55;
+                animation: bgDrift 8s ease-in-out infinite; will-change: transform; }
+.bgloop .g1 { width: 46vmax; height: 46vmax; left: -6vmax; top: 6vmax; animation-delay: -1s;
+              background: radial-gradient(circle, #b14bff, rgba(177,75,255,0) 70%); }
+.bgloop .g2 { width: 40vmax; height: 40vmax; right: -5vmax; top: 30vmax; animation-delay: -4s;
+              background: radial-gradient(circle, #ff3cac, rgba(255,60,172,0) 70%); }
+.bgloop .g3 { width: 52vmax; height: 52vmax; left: 26vmax; bottom: -20vmax; animation-delay: -6s;
+              background: radial-gradient(circle, #7c4dff, rgba(124,77,255,0) 72%); }
+@keyframes bgDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(4vmax, -3vmax, 0) scale(1.18); }
+}
+.bgvid { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -3;
+         pointer-events: none; opacity: .9; filter: saturate(1.15); background: transparent; }
+.bgscrim { position: fixed; inset: 0; z-index: -2; pointer-events: none;
+           background: radial-gradient(ellipse at 50% 38%, rgba(10,6,32,.10) 0%, rgba(10,6,32,.72) 78%),
+                       linear-gradient(180deg, rgba(10,6,32,.35), rgba(10,6,32,.55)); }
+
 /* ---- floating particles: they live behind the page content but above the colourful background ---- */
 [data-testid="stAppViewContainer"], [data-testid="stMain"], .stMain, header[data-testid="stHeader"] { background: transparent !important; }
 [data-testid="stMainBlockContainer"], .block-container { position: relative; z-index: 1; }
@@ -263,7 +285,7 @@ div.stButton > button:hover, div.stDownloadButton > button:hover { background: l
   12%  { opacity: var(--o, .8); } 88% { opacity: var(--o, .8); }
   100% { transform: translate3d(var(--dx), -15vh, 0) perspective(500px) rotateY(540deg); opacity: 0; }
 }
-@media (prefers-reduced-motion: reduce) { .particles { display: none; } }
+@media (prefers-reduced-motion: reduce) { .particles { display: none; } .bgvid { display: none; } .bgloop .glow { animation: none; } }
 @media (max-width: 700px) { .hero { min-height: 150px; padding: 1rem; } .hero-text { max-width: 100%; } }
 """.replace("__HERO__", _hero_background()).replace("__TROPHY__", _uri(TROPHY)) + av + pv + "</style>"
 
@@ -292,6 +314,24 @@ def particles_html(icons=24, sparkles=14):
                  f"--dx:{rnd.randint(-40, 40)}px;animation-duration:{dur}s;animation-delay:-{rnd.randint(0, dur)}s")
         items.append(f'<div class="p p-dot" style="{style}"></div>')
     return '<div class="particles">' + "".join(items) + "</div>"
+
+
+def background_html():
+    """Full-screen looping background: the 8-second magenta-purple particle video rendered by
+    tools/make_bg_loop.py, served from `static/` so it streams progressively.
+
+    A pure-CSS glow layer sits behind it and fills in whenever the video is missing, still
+    downloading, or blocked by `prefers-reduced-motion` -- so the page never looks flat."""
+    video = STATIC / "bg.mp4"
+    poster = STATIC / "bg.jpg"
+    tag = ""
+    if video.exists():
+        poster_attr = f' poster="app/static/{poster.name}"' if poster.exists() else ""
+        tag = (f'<video class="bgvid" autoplay muted loop playsinline preload="auto" '
+               f'disablepictureinpicture aria-hidden="true"{poster_attr}>'
+               f'<source src="app/static/{video.name}" type="video/mp4"></video>')
+    return ('<div class="bgloop" aria-hidden="true"><div class="glow g1"></div><div class="glow g2"></div>'
+            '<div class="glow g3"></div></div>' + tag + '<div class="bgscrim" aria-hidden="true"></div>')
 
 
 def hero_html(name, tagline):
