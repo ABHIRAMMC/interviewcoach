@@ -31,9 +31,12 @@ GLASS_CSS = """
                   inset 0 -1px 0 rgba(255, 255, 255, .05);
   --glass-sheen: linear-gradient(160deg, var(--glass-hi) 0%, var(--glass-lo) 46%, rgba(255, 255, 255, .02) 100%);
   /* sidebar glass. Effective transparency = (1 - --sidebar-alpha) * (1 - --sidebar-sheen-alpha),
-     e.g. the defaults below give (1 - .19) * (1 - .10) = 0.729 -> ~73% transparent. */
-  --sidebar-alpha: .19;
+     e.g. the defaults below give (1 - .12) * (1 - .10) = 0.792 -> ~79% transparent.
+     One-number tuning: lower these to see more video, raise them for more legibility. */
+  --sidebar-alpha: .12;
   --sidebar-sheen-alpha: .10;
+  /* tint used when the OS asks for reduced transparency: blur goes away, transparency stays */
+  --sidebar-alpha-flat: .42;
 }
 
 /* ============================== app shell ============================== */
@@ -70,8 +73,8 @@ section[data-testid="stSidebar"], [data-testid="stSidebar"], #stSidebar {
   border-right: 1px solid var(--glass-edge-soft);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, .06); }
 [data-testid="stSidebarContent"], [data-testid="stSidebarUserContent"],
-section[data-testid="stSidebar"] > div:first-child, #stSidebar > div:first-child {
-  background: transparent !important; }
+section[data-testid="stSidebar"] > div, #stSidebar > div, #stSidebar > div > div:first-child {
+  background-color: transparent !important; background-image: none !important; box-shadow: none !important; }
 /* at this transparency the video blooms behind the labels, so they get a soft halo to stay legible */
 section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] h3,
 section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] p,
@@ -261,13 +264,34 @@ div.stButton > button:focus-visible, button[data-testid^="stBaseButton"]:focus-v
 @supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
   [data-testid="stDataFrame"], [data-testid="stFileUploaderDropzone"], [data-testid="stAlert"],
-  section[data-testid="stSidebar"], #stSidebar, header[data-testid="stHeader"], button[data-testid^="stBaseButton"] {
+  header[data-testid="stHeader"], button[data-testid^="stBaseButton"] {
     background: linear-gradient(160deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04)), rgba(20, 12, 48, .9) !important; }
+  /* no blur available, so the sidebar keeps a flat tint but stays translucent */
+  section[data-testid="stSidebar"], [data-testid="stSidebar"], #stSidebar {
+    background:
+      linear-gradient(180deg,
+        rgb(124 77 255 / var(--sidebar-sheen-alpha)) 0%,
+        rgb(28 30 96 / var(--sidebar-sheen-alpha)) 52%,
+        rgb(10 58 92 / var(--sidebar-sheen-alpha)) 100%),
+      rgb(12 8 34 / var(--sidebar-alpha-flat)) !important; }
 }
+/* Windows' "Transparency effects" setting (and Chrome 118+) maps to this query. Forcing opaque
+   panels here silently cancelled every transparency request, so honour it by removing the blur
+   and keeping a lighter tint instead -- still translucent, just sharper. */
 @media (prefers-reduced-transparency: reduce) {
   .quest, .hero-text, [data-testid="stMetric"], [data-testid="stForm"], [data-testid="stExpander"] details,
-  [data-testid="stAlert"], section[data-testid="stSidebar"], #stSidebar, header[data-testid="stHeader"] {
-    backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(18, 11, 44, .93) !important; }
+  [data-testid="stAlert"], header[data-testid="stHeader"] {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: linear-gradient(160deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .03)),
+                rgba(18, 11, 44, .42) !important; }
+  section[data-testid="stSidebar"], [data-testid="stSidebar"], #stSidebar {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background:
+      linear-gradient(180deg,
+        rgb(124 77 255 / var(--sidebar-sheen-alpha)) 0%,
+        rgb(28 30 96 / var(--sidebar-sheen-alpha)) 52%,
+        rgb(10 58 92 / var(--sidebar-sheen-alpha)) 100%),
+      rgb(12 8 34 / var(--sidebar-alpha-flat)) !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .particles { display: none; } .bgvid { display: none; } .bgloop .glow { animation: none; }
