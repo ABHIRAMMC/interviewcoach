@@ -1,9 +1,9 @@
 [theme]
 base = "dark"
 primaryColor = "#00E5FF"
-backgroundColor = "#0B0F1A"
-secondaryBackgroundColor = "#131A2B"
-textColor = "#E8ECF8"
+backgroundColor = "#06031A"
+secondaryBackgroundColor = "#241A52"
+textColor = "#F5F2FF"
 
 # static/bg.mp4 (the 8-second background loop) is streamed from here instead of being
 # base64-inlined, so the page stays tiny and the video plays progressively.

@@ -4,6 +4,8 @@ import html
 import random
 from pathlib import Path
 
+import glass
+
 ASSETS = Path(__file__).with_name("assets")
 STATIC = Path(__file__).with_name("static")   # served by Streamlit at app/static/<file>
 
@@ -140,80 +142,9 @@ def _hero_background():
 
 
 def build_css():
+    """The glassmorphism theme (see glass.py) plus one background-image rule per level avatar."""
     av = "".join(f".av{i + 1}{{background-image:url({_uri(s)});}}\n" for i, s in enumerate(AVATARS))
-    return """<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-.stApp { background:
-  radial-gradient(circle at 8% 0%, rgba(124,77,255,.45) 0, transparent 38%),
-  radial-gradient(circle at 95% 8%, rgba(0,200,255,.30) 0, transparent 40%),
-  radial-gradient(circle at 60% 105%, rgba(255,60,172,.28) 0, transparent 45%), #0a0620; }
-[data-testid="stSidebar"], section[data-testid="stSidebar"] > div:first-child {
-  background: linear-gradient(180deg, #2a1470 0%, #14205f 55%, #0b3a5c 100%) !important; }
-h1, h2, h3 { color: #fff; }
-h3 { background: linear-gradient(90deg, #ff9ff3, #7cf9ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.hero { position: relative; border-radius: 20px; overflow: hidden; min-height: 190px; display: flex; align-items: center;
-        padding: 1.2rem 1.8rem; margin: .2rem 0 1rem; background-size: cover; background-position: center;
-        box-shadow: 0 10px 34px rgba(106,61,240,.55); border: 2px solid rgba(255,255,255,.25);
-        background-image: url(__HERO__); }
-.hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,6,32,.55) 0%, rgba(10,6,32,0) 60%); }
-.hero-text { position: relative; max-width: 58%; }
-.hero-title { font-family: 'Press Start 2P', monospace; font-size: clamp(1.1rem, 3.4vw, 2.1rem); color: #fff;
-              text-shadow: 0 0 18px rgba(124,249,255,.85), 3px 3px 0 #ff3cac; line-height: 1.35; }
-.hero-sub { margin-top: .7rem; font-size: clamp(.85rem, 1.6vw, 1.05rem); color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
-.quest { border: 3px solid transparent; border-radius: 16px; padding: 1.1rem 1.3rem; margin: .5rem 0 .6rem; font-size: 1.2rem;
-         background: linear-gradient(#171042, #171042) padding-box, linear-gradient(135deg, #ff3cac, #7c4dff, #16b7ff, #3ddc84) border-box;
-         box-shadow: 0 0 24px rgba(124,77,255,.45); }
-.quest .tag { font-family: 'Press Start 2P', monospace; font-size: .65rem; color: #ffe66d; margin-bottom: .6rem; letter-spacing: 1px; }
-.lvlrow { display: flex; align-items: center; gap: .7rem; margin: .4rem 0; }
-.avatar { width: 56px; height: 56px; flex: none; background-size: contain; background-repeat: no-repeat; background-position: center; }
-.lvl { font-family: 'Press Start 2P', monospace; font-size: .75rem; color: #ffe66d; line-height: 1.5; }
-.done { display: flex; align-items: center; gap: .7rem; margin: 1rem 0 .3rem; font-size: 1.6rem; font-weight: 700; }
-.trophy { width: 52px; height: 52px; background-size: contain; background-repeat: no-repeat; background-image: url(__TROPHY__); }
-.grade { font-family: 'Press Start 2P', monospace; font-size: 2.6rem; text-align: center; line-height: 1.3; }
-.grade-S { color: #ffe66d; text-shadow: 0 0 16px #ffe66d; } .grade-A { color: #3ddc84; text-shadow: 0 0 12px #3ddc84; }
-.grade-B { color: #7cf9ff; text-shadow: 0 0 12px #7cf9ff; } .grade-C { color: #ffa726; } .grade-D { color: #ff5252; }
-.gcap { text-align: center; font-size: .75rem; opacity: .75; }
-[data-testid="stMetricValue"] { color: #7cf9ff; }
-div.stButton > button, div.stDownloadButton > button, button[kind="secondaryFormSubmit"], button[kind="primaryFormSubmit"] {
-  background: linear-gradient(135deg, #7c4dff, #16b7ff); color: #fff; border: 0; border-radius: 12px; font-weight: 700; }
-div.stButton > button:hover, div.stDownloadButton > button:hover { background: linear-gradient(135deg, #ff3cac, #7c4dff); color: #fff; box-shadow: 0 0 16px rgba(255,60,172,.65); }
-
-/* ---- looping background video (static/bg.mp4: magenta-purple particles in darkness) ----
-   Layers, back to front: CSS glow fallback (-4), video (-3), scrim (-2), AR/VR particles (-1). */
-.bgloop { position: fixed; inset: 0; z-index: -4; pointer-events: none; overflow: hidden; }
-.bgloop .glow { position: absolute; border-radius: 50%; filter: blur(50px); opacity: .55;
-                animation: bgDrift 8s ease-in-out infinite; will-change: transform; }
-.bgloop .g1 { width: 46vmax; height: 46vmax; left: -6vmax; top: 6vmax; animation-delay: -1s;
-              background: radial-gradient(circle, #b14bff, rgba(177,75,255,0) 70%); }
-.bgloop .g2 { width: 40vmax; height: 40vmax; right: -5vmax; top: 30vmax; animation-delay: -4s;
-              background: radial-gradient(circle, #ff3cac, rgba(255,60,172,0) 70%); }
-.bgloop .g3 { width: 52vmax; height: 52vmax; left: 26vmax; bottom: -20vmax; animation-delay: -6s;
-              background: radial-gradient(circle, #7c4dff, rgba(124,77,255,0) 72%); }
-@keyframes bgDrift {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50%      { transform: translate3d(4vmax, -3vmax, 0) scale(1.18); }
-}
-.bgvid { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -3;
-         pointer-events: none; opacity: .9; filter: saturate(1.15); background: transparent; }
-.bgscrim { position: fixed; inset: 0; z-index: -2; pointer-events: none;
-           background: radial-gradient(ellipse at 50% 38%, rgba(10,6,32,.10) 0%, rgba(10,6,32,.72) 78%),
-                       linear-gradient(180deg, rgba(10,6,32,.35), rgba(10,6,32,.55)); }
-
-/* ---- floating particles: they live behind the page content but above the colourful background ---- */
-[data-testid="stAppViewContainer"], [data-testid="stMain"], .stMain, header[data-testid="stHeader"] { background: transparent !important; }
-[data-testid="stMainBlockContainer"], .block-container { position: relative; z-index: 1; }
-.particles { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-.p { position: absolute; top: 0; left: 0; opacity: 0; animation-timing-function: linear; animation-iteration-count: infinite;
-     will-change: transform, opacity; }
-.p-dot { border-radius: 50%; background: var(--c); box-shadow: 0 0 12px var(--c); animation-name: floatUp; }
-@keyframes floatUp {
-  0%   { transform: translate3d(0, 105vh, 0) rotate(0deg); opacity: 0; }
-  12%  { opacity: var(--o, .8); } 88% { opacity: var(--o, .8); }
-  100% { transform: translate3d(var(--dx), -15vh, 0) rotate(360deg); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) { .particles { display: none; } .bgvid { display: none; } .bgloop .glow { animation: none; } }
-@media (max-width: 700px) { .hero { min-height: 150px; padding: 1rem; } .hero-text { max-width: 100%; } }
-""".replace("__HERO__", _hero_background()).replace("__TROPHY__", _uri(TROPHY)) + av + "</style>"
+    return glass.glass_css(_hero_background(), _uri(TROPHY)).replace("</style>", av + "</style>")
 
 
 def particles_html(sparkles=40):
