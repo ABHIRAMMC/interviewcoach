@@ -107,12 +107,29 @@ def students_tab():
                    "Last sign-in": fmt_ts(s["last_login"])} for s in students], hide_index=True)
     pick = st.selectbox("Select a student", [s["username"] for s in students], key="manage_pick")
     rec = next(s for s in students if s["username"] == pick)
+    with st.expander(f"🔑 Set or reset the password for {pick}"):
+        show = st.checkbox("Show what I type", key="pw_show")
+        kind = "default" if show else "password"
+        with st.form("set_pw", clear_on_submit=True):
+            pw1 = st.text_input("New password", type=kind, key="pw1",
+                                help="At least 6 characters. The student signs in with this.")
+            pw2 = st.text_input("Repeat password", type=kind, key="pw2")
+            gen = st.checkbox("Generate a random one for me instead", key="pw_gen")
+            go = st.form_submit_button("Save password")
+        if go:
+            if gen:
+                pw = new_password()
+                set_password(pick, pw)
+                st.success(f"New password for **{pick}**: `{pw}`. Copy it now, it is not shown again.")
+            elif len(pw1.strip()) < 6:
+                st.error("Use at least 6 characters.")
+            elif pw1 != pw2:
+                st.error("The two passwords do not match.")
+            else:
+                set_password(pick, pw1.strip())
+                st.success(f"Password updated for **{pick}**.")
     c1, c2, c3 = st.columns(3)
-    if c1.button("🔑 Reset password", key="reset_pw"):
-        pw = new_password()
-        set_password(pick, pw)
-        st.success(f"New password for **{pick}**: `{pw}`. Copy it now.")
-    if c2.button("⏸ Deactivate" if rec["active"] else "▶ Activate", key="toggle_active"):
+    if c1.button("⏸ Deactivate" if rec["active"] else "▶ Activate", key="toggle_active"):
         set_active(pick, not rec["active"])
         st.rerun()
     with c3:
